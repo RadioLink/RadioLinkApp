@@ -17,6 +17,11 @@ import android.widget.TextView;
 import android.os.Bundle;
 import android.widget.Toast;
 
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+
+import jp.tf_web.radiolink.audio.OpusManager;
 import jp.tf_web.radiolink.audio.RecordManager;
 import jp.tf_web.radiolink.audio.RecordManagerListener;
 import jp.tf_web.radiolink.audio.TrackManager;
@@ -29,9 +34,12 @@ import jp.tf_web.radiolink.bluetooth.BluetoothAudioDeviceManager;
 import jp.tf_web.radiolink.bluetooth.MediaButtonReceiver;
 import jp.tf_web.radiolink.bluetooth.MediaButtonReceiverListener;
 import jp.tf_web.radiolink.net.NetWorkUtil;
-import jp.tf_web.radiolink.net.stun.StunProtocolUtil;
+import jp.tf_web.radiolink.net.udp.service.UDPService;
+import jp.tf_web.radiolink.net.udp.service.UDPServiceListener;
+import jp.tf_web.radiolink.net.udp.service.UDPServiceReceiver;
 import jp.tf_web.radiolink.sensor.LightSensorManager;
 import jp.tf_web.radiolink.sensor.LightSensorManagerListener;
+import jp.tf_web.radiolink.util.ByteArrayUtil;
 
 
 public class HomeActivity extends Activity
@@ -62,8 +70,11 @@ public class HomeActivity extends Activity
     //課金処理の実装
     private InAppBillingUtil inAppBillingUtil;
 
-    //STUN 処理のユーテリティ
-    private StunProtocolUtil stunProtocolUtil;
+    //Opusデコード,エンコード
+    private OpusManager opusManager;
+
+    //UDPで受信したパケットを受け取るレシーバー
+    private UDPServiceReceiver udpServiceReceiver;
 
     @Override
     public void onCreate(Bundle savedInstanceState)
@@ -133,21 +144,27 @@ public class HomeActivity extends Activity
 
         //課金処理の破棄
         inAppBillingUtil.dispose();
+
+        if(opusManager == null) return;
+        try{
+            opusManager.close();
+        }
+        catch ( IOException e ){
+            Log.e( TAG,"Could not close or flush stream", e );
+        }
     }
 
     //各クラスの初期化
     private void initialize(){
+        //OPUSデコード,エンコード
+        opusManager = new OpusManager(Config.SAMPLE_RATE_IN_HZ,
+                1,
+                Config.OPUS_FRAME_SIZE,
+                Config.OPUS_OUTPUT_BITRATE_BPS);
 
-        //ローカルIPアドレスを取得
-        NetWorkUtil.getLocalIpv4Address(new NetWorkUtil.GetLocalIpv4AddressListener() {
-            @Override
-            public void onResult(String address) {
-                Log.d(TAG,"local IpAddress:"+address);
-
-                //STUN処理のユーテリティを初期化
-                stunProtocolUtil = new StunProtocolUtil(Config.STUN_SERVER_NAME,Config.STUN_SERVER_PORT,address,Config.STUN_BIND_PORT);
-            }
-        });
+        //UDPServiceからの受信を受け取るレシーバー
+        udpServiceReceiver = new UDPServiceReceiver(udpServiceListener);
+        udpServiceReceiver.registerReceiver(getApplicationContext());
 
         //Bluetoothヘッドセットを利用する
         bluetoothAudioDeviceManager = new BluetoothAudioDeviceManager(getApplicationContext());
@@ -164,6 +181,23 @@ public class HomeActivity extends Activity
 
     //各クラスの開始
     private void start(){
+        //ローカルIPアドレスを取得
+        NetWorkUtil.getLocalIpv4Address(new NetWorkUtil.GetLocalIpv4AddressListener() {
+            @Override
+            public void onResult(final String address) {
+                Log.d(TAG,"local IpAddress:"+address);
+
+                //UDPサービス START
+                Map<String,Object> params = new HashMap<String,Object>(){
+                    {
+                        put(UDPService.KEY_NAME_BIND_ADDRESS, address);
+                        put(UDPService.KEY_NAME_BIND_PORT, Integer.valueOf(Config.BIND_PORT));
+                    }
+                };
+                UDPService.sendCmd(getApplicationContext(), UDPService.CMD_START, params);
+            }
+        });
+
         //Bluetoothヘッドセットがあればそれを使う
         bluetoothAudioDeviceManager.startVoiceRecognition();
 
@@ -205,6 +239,9 @@ public class HomeActivity extends Activity
         if(lightSensorManager != null) {
             lightSensorManager.stop();
         }
+
+        //UDPサービス STOP
+        UDPService.sendCmd(getApplicationContext(), UDPService.CMD_STOP);
     }
 
     //START ボタンクリック時
@@ -239,9 +276,6 @@ public class HomeActivity extends Activity
 
         @Override
         public void onClick(View v) {
-            //STUN Bindingを実行
-            if(stunProtocolUtil == null) return;
-            stunProtocolUtil.binding();
         }
     };
 
@@ -271,13 +305,16 @@ public class HomeActivity extends Activity
 
             //TODO: volume を 画面に反映させる
 
-            //TODO: OPUS変換
-            //TODO: UDPで送信
+            //OPUSエンコード
+            byte[] opus = opusManager.encode(data);
+            if(opus.length > 1) {
+                //UDPで送信
+                udpServiceSendByteArray("192.168.0.9", Config.BIND_PORT, opus);
+            }
 
-            //TODO: 仮でエコーしてみる
-            Log.d(TAG,"onAudioRecord data:"+data.length+" size:"+size+" volume:"+volume);
-
-            trackManager.write(data, 0,size);
+            //仮でエコーしてみる
+            //Log.d(TAG, "onAudioRecord data:" + data.length + " size:" + size + " volume:" + volume);
+            //trackManager.write(data, 0, size);
         }
     };
 
@@ -311,7 +348,7 @@ public class HomeActivity extends Activity
 
         @Override
         public void onLightSensorChanged(SensorEvent event, float value) {
-            Log.d(TAG, "onLightSensorChanged value:"+value);
+            //Log.d(TAG, "onLightSensorChanged value:" + value);
             if(value < Config.LIGHT_SENSOR_THRESHOLD){
                 //照度センサーの閾値 判定
                 //TODO: 画面の操作を停止する等を行う
@@ -379,11 +416,65 @@ public class HomeActivity extends Activity
             Log.d(TAG,"IAB 購入 成功");
 
             if (purchase.getSku().equals(Config.PRODUCT_ITEM_1_ID)) {
-                Log.d(TAG,"IAB あなたの商品：" + Config.PRODUCT_ITEM_1_ID + "を購入しました。\n"
-                            +"orderIdは：" + purchase.getOrderId()+"\n"
-                            +"INAPP_PURCHASE_DATAのJSONは：" + purchase.getOriginalJson());
+                Log.d(TAG, "IAB あなたの商品：" + Config.PRODUCT_ITEM_1_ID + "を購入しました。\n"
+                        + "orderIdは：" + purchase.getOrderId() + "\n"
+                        + "INAPP_PURCHASE_DATAのJSONは：" + purchase.getOriginalJson());
 
                 //TODO: 購入商品に一致する機能解除等を行う
+            }
+        }
+    };
+
+    /** UDPサービスに byte[]データを送信
+     *
+     * @param addr 送信先ホストアドレス
+     * @param port ポート
+     * @param src  byte[]データ
+     */
+    private void udpServiceSendByteArray(final String addr,final int port,final byte[] src){
+        //サービスにデータを送信
+        Map<String,Object> params = new HashMap<String,Object>(){
+            {
+                put(UDPService.KEY_NAME_CONNECT_HOST, addr);
+                put(UDPService.KEY_NAME_CONNECT_PORT, Integer.valueOf(port));
+
+                put(UDPService.KEY_NAME_SEND_HOST, addr);
+                put(UDPService.KEY_NAME_SEND_PORT, Integer.valueOf(port));
+
+                put(UDPService.KEY_NAME_SEND_BUFFER, src);
+            }
+        };
+        UDPService.sendCmd(getApplicationContext(), UDPService.CMD_SEND, params);
+    }
+
+    //ブロードキャストレシーバーから受信したイベントを受け取る
+    private UDPServiceListener udpServiceListener = new UDPServiceListener(){
+
+        /** UDPServiceから届いいた メッセージを受信した場合
+         *
+         * @param cmd コマンド文字列
+         * @param data 受信した byte[]
+         */
+        @Override
+        public void onReceive(final String cmd, final byte[] data) {
+            Log.d(TAG, "onReceive cmd:" + cmd);
+            if(cmd == null){
+                return;
+            }
+
+            if (cmd.equals(UDPService.CMD_RECEIVE)) {
+                if(data == null){
+                    Log.d(TAG, "buf is null");
+                    return;
+                }
+                //受信データのサイズ
+                Log.i(TAG, "receive data size:"+data.length);
+
+                //OPUSデコードする
+                byte[] pcm = opusManager.decode(data,Config.OPUS_FRAME_SIZE);
+
+                //再生
+                trackManager.write(pcm, 0, pcm.length);
             }
         }
     };

@@ -41,5 +41,5 @@ public class Config {
     public static final int STUN_SERVER_PORT = 19302;
 
     //STUNサーバからのレスポンスを受け取るポート
-    public static final int STUN_BIND_PORT = 19303;
+    public static final int BIND_PORT = 19303;
 }

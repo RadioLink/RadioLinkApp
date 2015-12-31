@@ -64,7 +64,7 @@ public class BluetoothAudioDeviceManager {
 
     //ヘッドセットに接続
     public void startVoiceRecognition(){
-        if(bluetoothHeadset == null) return;
+        if(bluetoothDevice == null) return;
 
         //オーディオマネージャーの設定変更
         audioManager = (AudioManager)context.getSystemService(Context.AUDIO_SERVICE);

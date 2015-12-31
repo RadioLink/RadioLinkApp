@@ -14,12 +14,8 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.socket.DatagramPacket;
-import jp.tf_web.radiolink.net.udp.UDPReceiver;
-import jp.tf_web.radiolink.net.udp.UDPReceiverListener;
-import jp.tf_web.radiolink.net.udp.UDPSender;
 import jp.tf_web.radiolink.util.ByteArrayUtil;
 
 /** UDP サービス
@@ -40,6 +36,7 @@ public class UDPService extends Service {
     public static String KEY_NAME_SEND_PORT      = "send_port";
     public static String KEY_NAME_CONNECT_HOST   = "connect_host";
     public static String KEY_NAME_CONNECT_PORT   = "connect_port";
+    public static String KEY_NAME_BIND_ADDRESS   = "bind_address";
     public static String KEY_NAME_BIND_PORT      = "bind_port";
     public static String KEY_NAME_RECEIVE_BUFFER = "receive_buffer";
 
@@ -63,10 +60,6 @@ public class UDPService extends Service {
     //UDPからの受信
     private UDPReceiver udpReceiver;
 
-    //UDPで送信
-    private UDPSender udpSender;
-
-
     /** UDPServiceにコマンドを送信
      *
      * @param cmd コマンド種類
@@ -85,6 +78,7 @@ public class UDPService extends Service {
         intent.putExtra(KEY_NAME_CMD, cmd);
         if(params != null){
             if(cmd.equals(CMD_START)){
+                intent.putExtra(KEY_NAME_BIND_ADDRESS, (String) params.get(KEY_NAME_BIND_ADDRESS));
                 intent.putExtra(KEY_NAME_BIND_PORT, (Integer) params.get(KEY_NAME_BIND_PORT));
             }
             else if(cmd.equals(CMD_SEND)){
@@ -177,8 +171,9 @@ public class UDPService extends Service {
                 @Override
                 public void run() {
                     //初期化処理
+                    final String addr = bundle.getString(UDPService.KEY_NAME_BIND_ADDRESS);
                     final int port = bundle.getInt(UDPService.KEY_NAME_BIND_PORT);
-                    start(port);
+                    start(addr,port);
                 }
             });
         }
@@ -211,7 +206,7 @@ public class UDPService extends Service {
                     final InetSocketAddress addr = new InetSocketAddress(host, port);
 
                     final byte[] buf = bundle.getByteArray(UDPService.KEY_NAME_SEND_BUFFER);
-                    udpSend(connectAddr, addr, buf);
+                    udpReceiver.writeUDP(connectAddr, addr, buf);
                 }
             });
 
@@ -236,22 +231,6 @@ public class UDPService extends Service {
         return true;
     }
 
-
-    /** UDPで送信
-     *
-     * @param connectAddr
-     * @param addr
-     * @param buf
-     */
-    private void udpSend(final InetSocketAddress connectAddr,final InetSocketAddress addr,byte[] buf){
-        //送信先
-        if(udpSender == null){
-            //送信先を設定
-            udpSender = new UDPSender(connectAddr.getAddress(),connectAddr.getPort());
-        }
-        udpSender.writeUDP(addr, buf);
-    }
-
     /** レシーバーにデータを送信
      *
      */
@@ -267,12 +246,12 @@ public class UDPService extends Service {
     /** 初期化処理など
      *
      */
-    private void start(final int bindPort){
+    private void start(final String bindAddr,final int bindPort){
         Log.d(TAG, "start()");
 
         //受信待ち
         if(udpReceiver == null) {
-            udpReceiver = new UDPReceiver(bindPort,this.udpReceiverListener);
+            udpReceiver = new UDPReceiver(bindAddr,bindPort,this.udpReceiverListener);
         }
     }
 
@@ -303,23 +282,10 @@ public class UDPService extends Service {
          * @param packet
          */
         @Override
-        public void onReceive(ChannelHandlerContext ctx, DatagramPacket packet) {
+        public void onReceive(ChannelHandlerContext ctx, DatagramPacket packet, byte[] data) {
             InetSocketAddress addr = packet.sender();
             Log.d(TAG, "sender addr:" + addr);
 
-            ByteBuf content = packet.content();
-            if(content == null){
-                Log.d(TAG, "content is null");
-                return;
-            }
-
-            //slice()で後ろに付いている 0 (不要データ)を削除する
-            int capacity = content.slice().capacity();
-            Log.d(TAG, "content capacity:"+capacity);
-
-            //capacity ぶんだけ読み込む
-            byte[] data = new byte[capacity];
-            content.getBytes(0,data);
             if(data != null){
                 //受信データをログに表示
                 Log.d(TAG, "data length:" + data.length + " " + ByteArrayUtil.toHexString(data));

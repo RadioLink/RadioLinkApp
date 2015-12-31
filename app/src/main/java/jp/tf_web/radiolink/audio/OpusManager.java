@@ -25,6 +25,8 @@ package jp.tf_web.radiolink.audio;
 import java.io.IOException;
 import android.util.Log;
 
+import jp.tf_web.radiolink.util.ByteArrayUtil;
+
 /**
  * @author Manuel Beuttler
  *
@@ -51,7 +53,6 @@ public class OpusManager
 	{
 		try
 		{
-			System.loadLibrary("gnustl_shared");
 			System.loadLibrary( "jniopus" );
 		}
 		catch ( Exception e )
@@ -80,10 +81,37 @@ public class OpusManager
 	 * @return Amount of bytes read.
 	 * @throws IOException
 	 */
-	public int decode(byte[] in, short[] out) throws IOException
+	private int decode(byte[] in, short[] out) throws IOException
 	{
 		int bytesEncoded = nativeDecodeBytes(in,out);
 		return bytesEncoded;
+	}
+
+	/** Opus デコード
+	 *
+	 * @param opus
+	 * @param frameSize
+	 * @return
+	 */
+	public byte[] decode(final byte[] opus,final int frameSize){
+		//Opus デコードする
+		byte[] result = null;
+		try {
+			short[] outBuf = new short[frameSize];
+			int dec_size = decode(opus, outBuf);
+			if(dec_size > 0){
+				result = ByteArrayUtil.shortArr2byteArr(outBuf, dec_size);
+			}
+			else{
+				//Opusデコードに失敗
+				Log.d(TAG, "opus decode result:"+result);
+			}
+		}catch (IOException e){
+			//Opus デコードに失敗
+			e.printStackTrace();
+			Log.d(TAG, "error "+e.toString());
+		}
+		return result;
 	}
 
 	/**
@@ -93,9 +121,34 @@ public class OpusManager
 	 * @param out
 	 * @throws IOException
 	 */
-	public int encode(short[] in,byte[] out) throws IOException
+	private int encode(short[] in,byte[] out) throws IOException
 	{
 		return this.nativeEncodeBytes(in, out);
+	}
+
+	/** Opus エンコード
+	 *
+	 * @param pcm PCMの入ったバイト配列
+	 * @return Encode後のバイト配列
+	 */
+	public byte[] encode(final byte[] pcm){
+		byte[] result = null;
+		try {
+			//byte[] を short[] に変換
+			short[] src = ByteArrayUtil.byteArr2shortArr(pcm, pcm.length);
+			//Opus エンコードする
+			byte[] outByeBuf = new byte[src.length];
+			int enc_size = encode(src, outByeBuf);
+			result = new byte[enc_size];
+			System.arraycopy(outByeBuf, 0, result, 0, enc_size);
+		}
+		catch (IOException e){
+			//Opus エンコードに失敗
+			e.printStackTrace();
+			Log.d(TAG, "error "+e.toString());
+		}
+		return result;
+
 	}
 
 	public void close() throws IOException

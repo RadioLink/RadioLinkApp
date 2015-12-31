@@ -42,7 +42,12 @@ public class MediaButtonReceiver extends BroadcastReceiver {
      *
      */
     public void unregisterReceiver(){
-        this.context.unregisterReceiver(this);
+        try {
+            this.context.unregisterReceiver(this);
+        }
+        catch (IllegalArgumentException e){
+
+        }
     }
 
     /** コンストラクタ

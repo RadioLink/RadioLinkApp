@@ -46,11 +46,11 @@ const int MAX_PAYLOAD_BYTES = 4000;
 //--
 
 /*
- * Class:     jp_tf_1web_radiolink_audio_opus_OpusManager
+ * Class:     jp_tf_web_radiolink_audio_OpusManager
  * Method:    nativeInit
  * Signature: (I;I;I;I)Z
  */
-JNIEXPORT jboolean JNICALL Java_jp_tf_1web_radiolink_audio_opus_OpusManager_nativeInit (JNIEnv *env, jobject obj, jint samplingRate, jint numberOfChannels, jint frameSize,jint outputBitrateBps)
+JNIEXPORT jboolean JNICALL Java_jp_tf_1web_radiolink_audio_OpusManager_nativeInit (JNIEnv *env, jobject obj, jint samplingRate, jint numberOfChannels, jint frameSize,jint outputBitrateBps)
 {
 	FRAME_SIZE = frameSize;
 	SAMPLING_RATE = samplingRate;
@@ -88,11 +88,11 @@ JNIEXPORT jboolean JNICALL Java_jp_tf_1web_radiolink_audio_opus_OpusManager_nati
 }
 
 /*
- * Class:     jp_tf_1web_radiolink_audio_opus_OpusManager
+ * Class:     jp_tf_1web_radiolink_audio_OpusManager
  * Method:    nativeDecodeBytes
  * Signature: ([B;[S)I
  */
-JNIEXPORT jint JNICALL Java_jp_tf_1web_radiolink_audio_opus_OpusManager_nativeDecodeBytes (JNIEnv *env, jobject obj, jbyteArray in, jshortArray out)
+JNIEXPORT jint JNICALL Java_jp_tf_1web_radiolink_audio_OpusManager_nativeDecodeBytes (JNIEnv *env, jobject obj, jbyteArray in, jshortArray out)
 {
 	//LOGD("Opus decoding");
 	//LOGD("FrameSize: %d - SamplingRate: %d - Channels: %d", FRAME_SIZE, SAMPLING_RATE, CHANNELS);
@@ -129,11 +129,11 @@ JNIEXPORT jint JNICALL Java_jp_tf_1web_radiolink_audio_opus_OpusManager_nativeDe
 }
 
 /*
- * Class:     jp_tf_1web_radiolink_audio_opus_OpusManager
+ * Class:     jp_tf_1web_radiolink_audio_OpusManager
  * Method:    nativeReleaseDecoder
  * Signature: ()Z
  */
-JNIEXPORT jboolean JNICALL Java_jp_tf_1web_radiolink_audio_opus_OpusManager_nativeReleaseDecoder (JNIEnv *env, jobject obj)
+JNIEXPORT jboolean JNICALL Java_jp_tf_1web_radiolink_audio_OpusManager_nativeReleaseDecoder (JNIEnv *env, jobject obj)
 {
 	/*
 	 * 	opus_encoder_destroy(enc);
@@ -149,11 +149,11 @@ JNIEXPORT jboolean JNICALL Java_jp_tf_1web_radiolink_audio_opus_OpusManager_nati
 }
 
 /*
- * Class:     jp_tf_1web_radiolink_audio_opus_OpusManager
+ * Class:     jp_tf_1web_radiolink_audio_OpusManager
  * Method:    nativeEncodeBytes
  * Signature: ([S;[B)I
  */
-JNIEXPORT jint JNICALL Java_jp_tf_1web_radiolink_audio_opus_OpusManager_nativeEncodeBytes (JNIEnv *env, jobject obj, jshortArray in, jbyteArray out)
+JNIEXPORT jint JNICALL Java_jp_tf_1web_radiolink_audio_OpusManager_nativeEncodeBytes (JNIEnv *env, jobject obj, jshortArray in, jbyteArray out)
 {
 	//LOGD("Opus Encoding");
 	//LOGD("FrameSize: %d - SamplingRate: %d - Channels: %d", FRAME_SIZE, SAMPLING_RATE, CHANNELS);
@@ -190,11 +190,11 @@ JNIEXPORT jint JNICALL Java_jp_tf_1web_radiolink_audio_opus_OpusManager_nativeEn
 }
 
 /*
- * Class:     jp_tf_1web_radiolink_audio_opus_OpusManager
+ * Class:     jp_tf_1web_radiolink_audio_OpusManager
  * Method:    nativeReleaseEncoder
  * Signature: ()Z
  */
-JNIEXPORT jboolean JNICALL Java_jp_tf_1web_radiolink_audio_opus_OpusManager_nativeReleaseEncoder (JNIEnv *env, jobject obj)
+JNIEXPORT jboolean JNICALL Java_jp_tf_1web_radiolink_audio_OpusManager_nativeReleaseEncoder (JNIEnv *env, jobject obj)
 {
 	/*
 	 * 	opus_encoder_destroy(enc);
