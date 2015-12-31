@@ -82,7 +82,7 @@ public class BluetoothAudioDeviceManager {
 
     //ヘッドセットを切断
     public void stopVoiceRecognition(){
-        if(bluetoothHeadset == null) return;
+        if(bluetoothDevice == null) return;
 
         //Bluetooth ヘッドセットの利用を停止する
         bluetoothHeadset.stopVoiceRecognition(bluetoothDevice);
