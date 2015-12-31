@@ -28,6 +28,7 @@ import jp.tf_web.radiolink.billing.util.Purchase;
 import jp.tf_web.radiolink.bluetooth.BluetoothAudioDeviceManager;
 import jp.tf_web.radiolink.bluetooth.MediaButtonReceiver;
 import jp.tf_web.radiolink.bluetooth.MediaButtonReceiverListener;
+import jp.tf_web.radiolink.net.NetWorkUtil;
 import jp.tf_web.radiolink.sensor.LightSensorManager;
 import jp.tf_web.radiolink.sensor.LightSensorManagerListener;
 
@@ -127,6 +128,15 @@ public class HomeActivity extends Activity
 
     //各クラスの初期化
     private void initialize(){
+
+        //ローカルIPアドレスを取得
+        NetWorkUtil.getLocalIpv4Address(new NetWorkUtil.GetLocalIpv4AddressListener() {
+            @Override
+            public void onResult(String address) {
+                Log.d(TAG,"LocalIP:"+address);
+            }
+        });
+
         //Bluetoothヘッドセットを利用する
         bluetoothAudioDeviceManager = new BluetoothAudioDeviceManager(getApplicationContext());
 
@@ -162,19 +172,27 @@ public class HomeActivity extends Activity
     //各クラスの終了
     private void stop(){
         //録音 停止
-        recordManager.stop();
-
+        if(recordManager != null) {
+            recordManager.stop();
+        }
         //再生 停止
-        trackManager.stop();
-
+        if(trackManager != null) {
+            trackManager.stop();
+        }
         //MEDIA_BUTTON イベントを受信する事を止める
-        mediaButtonReceiver.unregisterReceiver();
+        if(mediaButtonReceiver != null) {
+            mediaButtonReceiver.unregisterReceiver();
+        }
 
         //Bluetoothヘッドセットから切断
-        bluetoothAudioDeviceManager.stopVoiceRecognition();
+        if(bluetoothAudioDeviceManager != null) {
+            bluetoothAudioDeviceManager.stopVoiceRecognition();
+        }
 
         //照度センサーを利用 停止
-        lightSensorManager.stop();
+        if(lightSensorManager != null) {
+            lightSensorManager.stop();
+        }
     }
 
     //START ボタンクリック時
