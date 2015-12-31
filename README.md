@@ -5,7 +5,7 @@ RadioLink
 Pre-requisites
 --------------
 - Android Studio 1.3+ with [NDK](https://developer.android.com/ndk/) bundle.
-
+- Java-based STUN [JSTUN](https://github.com/tking/JSTUN)
 
 Screenshots
 -----------
