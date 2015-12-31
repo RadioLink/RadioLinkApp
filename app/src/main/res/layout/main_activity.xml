@@ -35,4 +35,11 @@
         android:id="@+id/btnInAppBilling"
         android:layout_gravity="center_horizontal" />
 
+    <Button
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="STUN Binding"
+        android:id="@+id/btnStunBinding"
+        android:layout_gravity="center_horizontal" />
+
 </LinearLayout>

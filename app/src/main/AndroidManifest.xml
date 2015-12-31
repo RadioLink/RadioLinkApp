@@ -41,6 +41,6 @@
         </intent-filter>
     </receiver>
     <!-- UDP送受信サービス -->
-    <service android:name=".net.service.UDPService" />
+    <service android:name=".net.udp.service.UDPService" />
     </application>
 </manifest>

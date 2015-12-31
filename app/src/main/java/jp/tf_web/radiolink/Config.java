@@ -1,5 +1,7 @@
 package jp.tf_web.radiolink;
 
+import java.net.InetAddress;
+
 /** 設定
  *
  * Created by furukawanobuyuki on 2015/12/11.
@@ -33,4 +35,11 @@ public class Config {
 
     //Google Play 課金アイテムのID
     public static final String PRODUCT_ITEM_1_ID = PrivateConfig.PRODUCT_ITEM_1_ID;
+
+    //Google STUN Server
+    public static final String STUN_SERVER_NAME = "stun.l.google.com";
+    public static final int STUN_SERVER_PORT = 19302;
+
+    //STUNサーバからのレスポンスを受け取るポート
+    public static final int STUN_BIND_PORT = 19303;
 }

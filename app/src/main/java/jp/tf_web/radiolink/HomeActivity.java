@@ -29,6 +29,7 @@ import jp.tf_web.radiolink.bluetooth.BluetoothAudioDeviceManager;
 import jp.tf_web.radiolink.bluetooth.MediaButtonReceiver;
 import jp.tf_web.radiolink.bluetooth.MediaButtonReceiverListener;
 import jp.tf_web.radiolink.net.NetWorkUtil;
+import jp.tf_web.radiolink.net.stun.StunProtocolUtil;
 import jp.tf_web.radiolink.sensor.LightSensorManager;
 import jp.tf_web.radiolink.sensor.LightSensorManagerListener;
 
@@ -58,7 +59,11 @@ public class HomeActivity extends Activity
     //照度センサー
     private LightSensorManager lightSensorManager;
 
+    //課金処理の実装
     private InAppBillingUtil inAppBillingUtil;
+
+    //STUN 処理のユーテリティ
+    private StunProtocolUtil stunProtocolUtil;
 
     @Override
     public void onCreate(Bundle savedInstanceState)
@@ -84,6 +89,10 @@ public class HomeActivity extends Activity
         //アイテム購入ボタン
         Button btnInAppBilling = (Button)findViewById(R.id.btnInAppBilling);
         btnInAppBilling.setOnClickListener(this.btnInAppBillingOnClickListener);
+
+        //STUNテストボタン
+        Button btnStunBinding = (Button)findViewById(R.id.btnStunBinding);
+        btnStunBinding.setOnClickListener(this.btnStunBindingOnClickListener);
 
         //課金 処理の為の初期化
         inAppBillingUtil = new InAppBillingUtil(getApplicationContext(),inAppBillingUtilListener);
@@ -133,7 +142,10 @@ public class HomeActivity extends Activity
         NetWorkUtil.getLocalIpv4Address(new NetWorkUtil.GetLocalIpv4AddressListener() {
             @Override
             public void onResult(String address) {
-                Log.d(TAG,"LocalIP:"+address);
+                Log.d(TAG,"local IpAddress:"+address);
+
+                //STUN処理のユーテリティを初期化
+                stunProtocolUtil = new StunProtocolUtil(Config.STUN_SERVER_NAME,Config.STUN_SERVER_PORT,address,Config.STUN_BIND_PORT);
             }
         });
 
@@ -217,9 +229,22 @@ public class HomeActivity extends Activity
         @Override
         public void onClick(View v) {
             //購入処理
+            if(inAppBillingUtil == null) return;
             inAppBillingUtil.onBuyButtonClicked(HomeActivity.this);
         }
     };
+
+    //STUN ボタンクリック時
+    private View.OnClickListener btnStunBindingOnClickListener = new View.OnClickListener(){
+
+        @Override
+        public void onClick(View v) {
+            //STUN Bindingを実行
+            if(stunProtocolUtil == null) return;
+            stunProtocolUtil.binding();
+        }
+    };
+
 
     /** 録音結果を受け取るリスナー
      *
