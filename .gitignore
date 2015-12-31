@@ -22,6 +22,7 @@ out
 build
 obj
 libs/*/
+app/src/main/libs/*/
 
 # Project lint settings
 lint.xml
@@ -31,3 +32,4 @@ lint.xml
 
 # Mac OS X
 .DS_STORE
+
