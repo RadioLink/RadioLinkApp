@@ -17,6 +17,8 @@ import android.widget.TextView;
 import android.os.Bundle;
 import android.widget.Toast;
 
+import com.nifty.cloud.mb.core.NCMBException;
+
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -33,13 +35,17 @@ import jp.tf_web.radiolink.billing.util.Purchase;
 import jp.tf_web.radiolink.bluetooth.BluetoothAudioDeviceManager;
 import jp.tf_web.radiolink.bluetooth.MediaButtonReceiver;
 import jp.tf_web.radiolink.bluetooth.MediaButtonReceiverListener;
+import jp.tf_web.radiolink.ncmb.NCMBUtil;
+import jp.tf_web.radiolink.ncmb.db.User;
+import jp.tf_web.radiolink.ncmb.listener.LoginListener;
+import jp.tf_web.radiolink.ncmb.listener.LogoutListener;
+import jp.tf_web.radiolink.ncmb.listener.SigninListener;
 import jp.tf_web.radiolink.net.NetWorkUtil;
 import jp.tf_web.radiolink.net.udp.service.UDPService;
 import jp.tf_web.radiolink.net.udp.service.UDPServiceListener;
 import jp.tf_web.radiolink.net.udp.service.UDPServiceReceiver;
 import jp.tf_web.radiolink.sensor.LightSensorManager;
 import jp.tf_web.radiolink.sensor.LightSensorManagerListener;
-import jp.tf_web.radiolink.util.ByteArrayUtil;
 
 
 public class HomeActivity extends Activity
@@ -76,6 +82,9 @@ public class HomeActivity extends Activity
     //UDPで受信したパケットを受け取るレシーバー
     private UDPServiceReceiver udpServiceReceiver;
 
+    //API処理をするユーテリティ
+    private NCMBUtil ncmbUtil;
+
     @Override
     public void onCreate(Bundle savedInstanceState)
     {
@@ -101,9 +110,17 @@ public class HomeActivity extends Activity
         Button btnInAppBilling = (Button)findViewById(R.id.btnInAppBilling);
         btnInAppBilling.setOnClickListener(this.btnInAppBillingOnClickListener);
 
-        //STUNテストボタン
-        Button btnStunBinding = (Button)findViewById(R.id.btnStunBinding);
-        btnStunBinding.setOnClickListener(this.btnStunBindingOnClickListener);
+        //ユーザー作成
+        Button btnSignin = (Button)findViewById(R.id.btnSignin);
+        btnSignin.setOnClickListener(this.btnSigninOnClickListener);
+
+        //ユーザー作成
+        Button btnLogin = (Button)findViewById(R.id.btnLogin);
+        btnLogin.setOnClickListener(this.btnLoginOnClickListener);
+
+        //ユーザー作成
+        Button btnLogout = (Button)findViewById(R.id.btnLogout);
+        btnLogout.setOnClickListener(this.btnLogoutOnClickListener);
 
         //課金 処理の為の初期化
         inAppBillingUtil = new InAppBillingUtil(getApplicationContext(),inAppBillingUtilListener);
@@ -128,6 +145,7 @@ public class HomeActivity extends Activity
     }
 
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        Log.d(TAG, "onActivityResult()");
         // 購入結果をActivityが受け取るための設定
         if (!inAppBillingUtil.onActivityResult(requestCode, resultCode, data)) {
             //課金と無関係の場合、メインの onActivityResult を実行
@@ -156,6 +174,10 @@ public class HomeActivity extends Activity
 
     //各クラスの初期化
     private void initialize(){
+
+        //API処理をするユーテリティ
+        ncmbUtil = new NCMBUtil(getApplicationContext(),Config.NCMB_APP_KEY,Config.NCMB_CLIENT_KEY);
+
         //OPUSデコード,エンコード
         opusManager = new OpusManager(Config.SAMPLE_RATE_IN_HZ,
                 1,
@@ -271,14 +293,79 @@ public class HomeActivity extends Activity
         }
     };
 
-    //STUN ボタンクリック時
-    private View.OnClickListener btnStunBindingOnClickListener = new View.OnClickListener(){
+    //Signin ボタンクリック時
+    private View.OnClickListener btnSigninOnClickListener = new View.OnClickListener(){
 
         @Override
         public void onClick(View v) {
+            String name = "testuser";
+            String password = "password";
+            String nickname = "testuser nickname";
+
+            User user = new User(name, password);
+            user.setNickName(nickname);
+
+            //ユーザー登録
+            ncmbUtil.signin(user, new SigninListener() {
+                @Override
+                public void success(User user) {
+                    Log.d(TAG,"signin success "+user);
+                }
+
+                @Override
+                public void error(NCMBException e) {
+                    Log.d(TAG,"signin error "+e);
+                }
+            });
         }
     };
 
+    //Login ボタンクリック時
+    private View.OnClickListener btnLoginOnClickListener = new View.OnClickListener(){
+
+        @Override
+        public void onClick(View v) {
+            String name = "testuser";
+            String password = "password";
+
+            ncmbUtil.login(new User(name, password), new LoginListener() {
+                @Override
+                public void success(User user) {
+                    Log.d(TAG,"login success "+user);
+                    //TODO: ログイン中のユーザーを取得してみる
+                    User currentUser = ncmbUtil.getCurrentUser();
+                    Log.d(TAG,"login currentUser "+currentUser + " nickName:"+ currentUser.getNickName());
+                }
+
+                @Override
+                public void error(NCMBException e) {
+                    Log.d(TAG,"login error "+e);
+                }
+            });
+        }
+    };
+
+    //Logout ボタンクリック時
+    private View.OnClickListener btnLogoutOnClickListener = new View.OnClickListener(){
+
+        @Override
+        public void onClick(View v) {
+            ncmbUtil.logout(new LogoutListener() {
+                @Override
+                public void success() {
+                    Log.d(TAG,"logout success");
+
+                    User currentUser = ncmbUtil.getCurrentUser();
+                    Log.d(TAG,"logout currentUser "+currentUser);
+                }
+
+                @Override
+                public void error(NCMBException e) {
+                    Log.d(TAG,"logout error "+e);
+                }
+            });
+        }
+    };
 
     /** 録音結果を受け取るリスナー
      *

@@ -38,8 +38,22 @@
     <Button
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="STUN Binding"
-        android:id="@+id/btnStunBinding"
+        android:text="Signin"
+        android:id="@+id/btnSignin"
+        android:layout_gravity="center_horizontal" />
+
+    <Button
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Login"
+        android:id="@+id/btnLogin"
+        android:layout_gravity="center_horizontal" />
+
+    <Button
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Logout"
+        android:id="@+id/btnLogout"
         android:layout_gravity="center_horizontal" />
 
 </LinearLayout>

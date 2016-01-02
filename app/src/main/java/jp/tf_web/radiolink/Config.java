@@ -42,4 +42,10 @@ public class Config {
 
     //STUNサーバからのレスポンスを受け取るポート
     public static final int BIND_PORT = 19303;
+
+    //ニフティクラウド mobile backend アプリケーションキー
+    public static final String NCMB_APP_KEY = PrivateConfig.NCMB_APP_KEY;
+
+    //ニフティクラウド mobile backend クライアントキー
+    public static final String NCMB_CLIENT_KEY = PrivateConfig.NCMB_CLIENT_KEY;
 }
