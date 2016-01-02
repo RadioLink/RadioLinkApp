@@ -5,6 +5,8 @@ package jp.tf_web.radiolink;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.hardware.SensorEvent;
 import android.media.AudioManager;
@@ -20,7 +22,9 @@ import android.widget.Toast;
 import com.nifty.cloud.mb.core.NCMBException;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import jp.tf_web.radiolink.audio.OpusManager;
@@ -36,16 +40,25 @@ import jp.tf_web.radiolink.bluetooth.BluetoothAudioDeviceManager;
 import jp.tf_web.radiolink.bluetooth.MediaButtonReceiver;
 import jp.tf_web.radiolink.bluetooth.MediaButtonReceiverListener;
 import jp.tf_web.radiolink.ncmb.NCMBUtil;
+import jp.tf_web.radiolink.ncmb.db.Channel;
+import jp.tf_web.radiolink.ncmb.db.ChannelUser;
 import jp.tf_web.radiolink.ncmb.db.User;
+import jp.tf_web.radiolink.ncmb.listener.CreateChannelListener;
+import jp.tf_web.radiolink.ncmb.listener.DeleteChannelListener;
+import jp.tf_web.radiolink.ncmb.listener.GetChannelListListener;
+import jp.tf_web.radiolink.ncmb.listener.GetChannelUserListListener;
 import jp.tf_web.radiolink.ncmb.listener.LoginListener;
 import jp.tf_web.radiolink.ncmb.listener.LogoutListener;
+import jp.tf_web.radiolink.ncmb.listener.SetChannelIconImageListener;
 import jp.tf_web.radiolink.ncmb.listener.SigninListener;
+import jp.tf_web.radiolink.ncmb.listener.UpdateChannelUserListener;
 import jp.tf_web.radiolink.net.NetWorkUtil;
 import jp.tf_web.radiolink.net.udp.service.UDPService;
 import jp.tf_web.radiolink.net.udp.service.UDPServiceListener;
 import jp.tf_web.radiolink.net.udp.service.UDPServiceReceiver;
 import jp.tf_web.radiolink.sensor.LightSensorManager;
 import jp.tf_web.radiolink.sensor.LightSensorManagerListener;
+import jp.tf_web.radiolink.util.BitmapUtil;
 
 
 public class HomeActivity extends Activity
@@ -121,6 +134,18 @@ public class HomeActivity extends Activity
         //ユーザー作成
         Button btnLogout = (Button)findViewById(R.id.btnLogout);
         btnLogout.setOnClickListener(this.btnLogoutOnClickListener);
+
+        //チャンネル作成
+        Button btnNewChannel = (Button)findViewById(R.id.btnNewChannel);
+        btnNewChannel.setOnClickListener(this.btnNewChannelOnClickListener);
+
+        //チャンネルアイコン設定
+        Button btnGetChannelList = (Button)findViewById(R.id.btnGetChannelList);
+        btnGetChannelList.setOnClickListener(this.btnGetChannelListOnClickListener);
+
+        //チャンネル削除
+        Button btnDeleteChannel = (Button)findViewById(R.id.btnDeleteChannel);
+        btnDeleteChannel.setOnClickListener(this.btnDeleteChannelOnClickListener);
 
         //課金 処理の為の初期化
         inAppBillingUtil = new InAppBillingUtil(getApplicationContext(),inAppBillingUtilListener);
@@ -309,12 +334,12 @@ public class HomeActivity extends Activity
             ncmbUtil.signin(user, new SigninListener() {
                 @Override
                 public void success(User user) {
-                    Log.d(TAG,"signin success "+user);
+                    Log.d(TAG, "signin success " + user);
                 }
 
                 @Override
                 public void error(NCMBException e) {
-                    Log.d(TAG,"signin error "+e);
+                    Log.e(TAG, "signin error " + e);
                 }
             });
         }
@@ -331,15 +356,15 @@ public class HomeActivity extends Activity
             ncmbUtil.login(new User(name, password), new LoginListener() {
                 @Override
                 public void success(User user) {
-                    Log.d(TAG,"login success "+user);
+                    Log.d(TAG, "login success " + user);
                     //TODO: ログイン中のユーザーを取得してみる
                     User currentUser = ncmbUtil.getCurrentUser();
-                    Log.d(TAG,"login currentUser "+currentUser + " nickName:"+ currentUser.getNickName());
+                    Log.d(TAG, "login currentUser " + currentUser + " nickName:" + currentUser.getNickName());
                 }
 
                 @Override
                 public void error(NCMBException e) {
-                    Log.d(TAG,"login error "+e);
+                    Log.e(TAG, "login error " + e);
                 }
             });
         }
@@ -353,15 +378,127 @@ public class HomeActivity extends Activity
             ncmbUtil.logout(new LogoutListener() {
                 @Override
                 public void success() {
-                    Log.d(TAG,"logout success");
+                    Log.d(TAG, "logout success");
 
                     User currentUser = ncmbUtil.getCurrentUser();
-                    Log.d(TAG,"logout currentUser "+currentUser);
+                    Log.d(TAG, "logout currentUser " + currentUser);
                 }
 
                 @Override
                 public void error(NCMBException e) {
-                    Log.d(TAG,"logout error "+e);
+                    Log.e(TAG, "logout error " + e);
+                }
+            });
+        }
+    };
+
+
+    //チャンネル作成
+    private View.OnClickListener btnNewChannelOnClickListener = new View.OnClickListener(){
+        @Override
+        public void onClick(View v) {
+            String channelCode = "testChannel";
+            ncmbUtil.createChannel(channelCode, new CreateChannelListener() {
+                @Override
+                public void success(Channel channel) {
+                    Log.d(TAG, "createChannel success " + channel.getChannelCode());
+
+                    //Channel アイコン設定
+                    Bitmap bmp = BitmapFactory.decodeResource(getResources(), R.drawable.dummy);
+                    byte[] data = BitmapUtil.bmp2byteArray(bmp, Bitmap.CompressFormat.JPEG);
+                    String extension = Bitmap.CompressFormat.JPEG.name();
+                    Log.d(TAG, "data size:"+data.length+" extension:" + extension);
+
+                    ncmbUtil.saveChannelIcon(channel, data, new SetChannelIconImageListener() {
+                        @Override
+                        public void success(Channel channel) {
+                            Log.d(TAG, "saveChannelIcon success size:" + channel.getIcon().length);
+                        }
+
+                        @Override
+                        public void error(NCMBException e) {
+                            Log.e(TAG, "saveChannelIcon error " + e);
+                        }
+                    });
+                }
+
+                @Override
+                public void error(NCMBException e) {
+                    Log.e(TAG, "createChannel error " + e);
+                }
+            });
+        }
+    };
+
+    //チャンネル一覧取得
+    private View.OnClickListener btnGetChannelListOnClickListener = new View.OnClickListener(){
+        @Override
+        public void onClick(View v) {
+            ncmbUtil.getChannelList(new GetChannelListListener() {
+                @Override
+                public void success(List<Channel> channels) {
+                    Log.d(TAG, "getChannelList success size:" + channels.size());
+                    if(channels.size() == 0) return;
+
+                    //チャンネルユーザーを追加
+                    final Channel c = channels.get(0);
+                    InetSocketAddress publicAddr = new InetSocketAddress("192.168.0.1",9999);
+                    InetSocketAddress localAddr = new InetSocketAddress("127.0.0.1",8080);
+                    ChannelUser cu1 = new ChannelUser(c,"ニックネーム1",publicAddr,localAddr);
+                    c.addChannelUser(cu1);
+
+                    ChannelUser cu2 = new ChannelUser(c,"ニックネーム2",publicAddr,localAddr);
+                    c.addChannelUser(cu2);
+
+                    //チャンネルユーザー一覧を更新
+                    ncmbUtil.updateChannelUserList(c, new UpdateChannelUserListener() {
+                        @Override
+                        public void success(Channel channel) {
+                            Log.d(TAG, "updateChannelUserList success");
+
+                            //チャンネルユーザー一覧を取得
+                            ncmbUtil.getChannelUserList(c, new GetChannelUserListListener() {
+                                @Override
+                                public void success(List<ChannelUser> channelUsers) {
+                                    Log.d(TAG, "getChannelUserList success size:" + channelUsers.size());
+                                }
+
+                                @Override
+                                public void error(NCMBException e) {
+                                    Log.e(TAG, "getChannelUserList error " + e);
+                                }
+                            });
+                        }
+
+                        @Override
+                        public void error(NCMBException e) {
+                            Log.e(TAG, "updateChannelUserList error " + e);
+                        }
+                    });
+                }
+
+                @Override
+                public void error(NCMBException e) {
+                    Log.e(TAG, "getChannelList error " + e);
+                }
+            });
+        }
+    };
+
+    //チャンネル削除
+    private View.OnClickListener btnDeleteChannelOnClickListener = new View.OnClickListener(){
+        @Override
+        public void onClick(View v) {
+            String channelCode = "testChannel";
+            ncmbUtil.deleteChannel(channelCode, new DeleteChannelListener() {
+                @Override
+                public void success() {
+                    Log.d(TAG, "deleteChannel success");
+                }
+
+                @Override
+                public void error(NCMBException e) {
+                    Log.e(TAG, "deleteChannel error " + e);
                 }
             });
         }

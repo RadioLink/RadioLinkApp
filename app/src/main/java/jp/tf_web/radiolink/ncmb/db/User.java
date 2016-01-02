@@ -2,8 +2,15 @@ package jp.tf_web.radiolink.ncmb.db;
 
 import android.util.Log;
 
+import com.nifty.cloud.mb.core.FetchCallback;
+import com.nifty.cloud.mb.core.NCMBAcl;
+import com.nifty.cloud.mb.core.NCMBBase;
+import com.nifty.cloud.mb.core.NCMBException;
 import com.nifty.cloud.mb.core.NCMBObject;
 import com.nifty.cloud.mb.core.NCMBUser;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 /** ユーザー情報を保持するクラス
  *
@@ -11,6 +18,12 @@ import com.nifty.cloud.mb.core.NCMBUser;
  */
 public class User implements NCMBObjectInterface {
     private static String TAG = "User";
+
+    //オブジェクト名
+    public static String OBJ_NAME = "user";
+
+    //追加パラメーターキー ニックネーム
+    public static String KEY_USER_NAME = "userName";
 
     //追加パラメーターキー ニックネーム
     private static String KEY_NICK_NAME = "nickName";
@@ -37,8 +50,32 @@ public class User implements NCMBObjectInterface {
         this.user.setUserName(userName);
         this.user.setPassword(password);
 
+        //パーミッションを設定
+        NCMBAcl acl = new NCMBAcl();
+        acl.setPublicReadAccess(true);
+        this.user.setAcl(acl);
+
         this.userName = userName;
         this.password = password;
+    }
+
+    public User(final JSONObject src){
+        this(null,null);
+        try {
+            String objectId = src.getString("objectId");
+            this.user.setObjectId(objectId);
+            this.user.fetchInBackground(new FetchCallback() {
+                @Override
+                public void done(NCMBBase ncmbBase, NCMBException e) {
+                    if(e == null){
+                        userName = ncmbBase.getString(KEY_USER_NAME);
+                        nickName = ncmbBase.getString(KEY_NICK_NAME);
+                    }
+                }
+            });
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
     }
 
     /** ユーザー名を取得

@@ -9,12 +9,12 @@ import jp.tf_web.radiolink.ncmb.db.User;
  * Created by furukawanobuyuki on 2016/01/02.
  */
 public interface LogoutListener {
-    /** ログアウト 成功
+    /** 成功
      *
      */
     void success();
 
-    /** ログアウト 失敗
+    /** 失敗
      *
      * @param e
      */

@@ -2,18 +2,16 @@ package jp.tf_web.radiolink.ncmb.listener;
 
 import com.nifty.cloud.mb.core.NCMBException;
 
-import jp.tf_web.radiolink.ncmb.db.User;
+import jp.tf_web.radiolink.ncmb.db.Channel;
 
-/** ログイン処理のリスナー
- *
+/** チャンネル削除
  * Created by furukawanobuyuki on 2016/01/02.
  */
-public interface LoginListener {
-    /** 成功
+public interface DeleteChannelListener {
+    /**  成功
      *
-     * @param user
      */
-    void success(User user);
+    void success();
 
     /** 失敗
      *
