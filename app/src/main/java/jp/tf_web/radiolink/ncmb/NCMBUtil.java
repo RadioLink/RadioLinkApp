@@ -54,6 +54,20 @@ public class NCMBUtil {
         NCMB.initialize(context, appKey, clientKey);
         //テスト
         //test();
+
+
+        //会員全体のパーミッションを設定
+        NCMBAcl acl = new NCMBAcl();
+        acl.setPublicReadAccess(true);
+        //acl.setPublicWriteAccess(true);
+        NCMBObject obj = new NCMBObject("user");
+        obj.setAcl(acl);
+        /*
+        try {
+            obj.save();
+        } catch (NCMBException e) {
+            e.printStackTrace();
+        }*/
     }
 
     /** 書き込みテスト
@@ -105,12 +119,14 @@ public class NCMBUtil {
                                                     } else {
                                                         //ニックネーム保存に失敗
                                                         listener.error(e);
+                                                        e.printStackTrace();
                                                     }
                                                 }
                                             });
                                         } else {
                                             //エラー
                                             listener.error(e);
+                                            e.printStackTrace();
                                         }
                                     }
                                 }
@@ -294,7 +310,6 @@ public class NCMBUtil {
         //チャンネルユーザー一覧を保存
         for(ChannelUser cu:channel.getChannelUserList()){
             try {
-                Log.d(TAG,"cu "+cu.channel+" user:"+cu.channel.getUser());
                 cu.toNCMBObject().save();
             } catch (NCMBException e) {
                 e.printStackTrace();
@@ -309,6 +324,8 @@ public class NCMBUtil {
      * @param listener
      */
     public void getChannelUserList(final Channel channel,final GetChannelUserListListener listener){
+        Log.d(TAG,"getChannelUserList()");
+
         //検索
         NCMBQuery<NCMBObject> query = new NCMBQuery<>(ChannelUser.OBJ_NAME);
 
@@ -431,7 +448,7 @@ public class NCMBUtil {
         //検索
         NCMBQuery<NCMBObject> query = new NCMBQuery<>(Channel.OBJ_NAME);
         if(channelCode != null){
-            Log.d(TAG, "getChannelList channelCode " + channelCode);
+            //Log.d(TAG, "getChannelList channelCode " + channelCode);
             query.whereContainedIn(Channel.KEY_CHANNEL_CODE, Arrays.asList(channelCode));
         }
         query.findInBackground(new FindCallback<NCMBObject>() {

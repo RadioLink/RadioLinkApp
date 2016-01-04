@@ -451,6 +451,7 @@ public class HomeActivity extends Activity
     private View.OnClickListener btnGetChannelListOnClickListener = new View.OnClickListener(){
         @Override
         public void onClick(View v) {
+
             ncmbUtil.getChannelList(new GetChannelListListener() {
                 @Override
                 public void success(List<Channel> channels) {
@@ -460,26 +461,34 @@ public class HomeActivity extends Activity
                     //チャンネルユーザーを追加
                     final Channel c = channels.get(0);
 
+                    //ログイン中のユーザーを取得
+                    final User currentUser = ncmbUtil.getCurrentUser();
+                    Log.d(TAG, "currentUser:" + currentUser);
+
                     //チャンネルユーザー一覧を取得
                     ncmbUtil.getChannelUserList(c, new GetChannelUserListListener() {
                         @Override
                         public void success(final Channel channel) {
                             Log.d(TAG, "getChannelUserList success size:" + channel.getChannelUserList().size());
 
+                            if (channel.getUser().getUserName() == null) {
+                                Log.e(TAG, "channel.getUser().getUserName() is null");
+                                return;
+                            }
                             Log.d(TAG, "channel user:" + channel.getUser().getUserName());
 
                             {
                                 InetSocketAddress publicAddr = new InetSocketAddress("192.168.0.1", 9999);
                                 InetSocketAddress localAddr = new InetSocketAddress("127.0.0.1", 8080);
-                                ChannelUser cu1 = new ChannelUser(channel, "ニックネーム1", publicAddr, localAddr);
-
+                                ChannelUser cu1 = new ChannelUser(channel, currentUser, publicAddr, localAddr);
                                 Log.d(TAG, "cu1 user:" + cu1.channel.getUser());
                                 channel.addChannelUser(cu1);
                             }
                             {
                                 InetSocketAddress publicAddr = new InetSocketAddress("192.168.0.2", 9999);
                                 InetSocketAddress localAddr = new InetSocketAddress("127.0.0.1", 8080);
-                                ChannelUser cu2 = new ChannelUser(channel, "ニックネーム2", publicAddr, localAddr);
+                                ChannelUser cu2 = new ChannelUser(channel, currentUser, publicAddr, localAddr);
+                                Log.d(TAG, "cu2 user:" + cu2.channel.getUser());
                                 channel.addChannelUser(cu2);
                             }
                             //チャンネルユーザー一覧を更新
@@ -556,7 +565,10 @@ public class HomeActivity extends Activity
          */
         @Override
         public void onAudioRecord(final byte[] data,final int size,final short volume) {
-            if(activeChannel == null) return;
+            if(activeChannel == null){
+                //Log.d(TAG, "activeChannel is null");
+                return;
+            }
 
             handler.post(new Runnable() {
                 @Override
@@ -706,11 +718,13 @@ public class HomeActivity extends Activity
         String publicIp = publicAddr.getAddress().getHostAddress();
         int publicPort = publicAddr.getPort();
         for(ChannelUser cu:activeChannel.getChannelUserList()){
+            Log.d(TAG,"cu:"+cu.getUser().getUserName());
             //自分以外に送信
             String ip = cu.publicSocketAddress.getAddress().getHostAddress();
-            //Log.d(TAG,"ip:"+ip+" publicIp:"+publicIp);
-            if((ip.equals(publicIp)) && (publicPort == cu.publicSocketAddress.getPort())){
-                break;
+            int port = cu.publicSocketAddress.getPort();
+            Log.d(TAG," ip:"+ip+":"+port+" publicIp:"+publicIp+":"+publicPort);
+            if((ip.equals(publicIp)) && (publicPort == port)){
+                continue;
             }
             //送信
             udpServiceSendByteArray(cu,src);
@@ -761,6 +775,10 @@ public class HomeActivity extends Activity
         }
 
         private void addChannelUser(final InetSocketAddress publicSocketAddr){
+
+            //ログイン中のユーザーを取得
+            final User currentUser = ncmbUtil.getCurrentUser();
+
             ncmbUtil.getChannelList(new GetChannelListListener() {
                 @Override
                 public void success(List<Channel> channels) {
@@ -770,8 +788,7 @@ public class HomeActivity extends Activity
                     //チャンネルユーザーを追加
                     final Channel c = channels.get(0);
 
-                    String nickname = Build.DEVICE;
-                    final ChannelUser cu = new ChannelUser(c, nickname, publicSocketAddr, localAddr);
+                    final ChannelUser cu = new ChannelUser(c, currentUser, publicSocketAddr, localAddr);
 
                     //パブリックIP,ポートを保存
                     publicAddr = publicSocketAddr;

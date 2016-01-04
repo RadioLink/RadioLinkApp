@@ -52,6 +52,9 @@ public class User implements NCMBObjectInterface {
 
         this.userName = userName;
         this.password = password;
+
+        //パーミッション設定
+        setAcl();
     }
 
     public User(final JSONObject src){
@@ -59,20 +62,13 @@ public class User implements NCMBObjectInterface {
         try {
             String objectId = src.getString("objectId");
             this.user.setObjectId(objectId);
-            this.user.fetchInBackground(new FetchCallback() {
-                @Override
-                public void done(NCMBBase ncmbBase, NCMBException e) {
-                    if(e == null){
-                        userName = ncmbBase.getString(KEY_USER_NAME);
-                        nickName = ncmbBase.getString(KEY_NICK_NAME);
-                    }
-                    else{
-                        //エラー
-                        e.printStackTrace();
-                        Log.e(TAG, "error "+e);
-                    }
-                }
-            });
+            try {
+                this.user.fetch();
+            } catch (NCMBException e) {
+                e.printStackTrace();
+            }
+            userName = this.user.getString(KEY_USER_NAME);
+            nickName = this.user.getString(KEY_NICK_NAME);
         } catch (JSONException e) {
             e.printStackTrace();
         }
@@ -85,21 +81,16 @@ public class User implements NCMBObjectInterface {
     public User(final User src){
         this(src.userName, src.password);
         String objectId = src.user.getObjectId();
-        //Log.d(TAG, " objectId:" + objectId);
         this.user.setObjectId(objectId);
-        this.user.fetchInBackground(new FetchCallback() {
-            @Override
-            public void done(NCMBBase ncmbBase, NCMBException e) {
-                if(e == null){
-                    //成功
-                }
-                else{
-                    e.printStackTrace();
-                    Log.e(TAG,"error e:"+e);
-                }
-            }
-        });
+        try{
+            this.user.fetch();
+        } catch (NCMBException e) {
+            e.printStackTrace();
+        }
         this.nickName = src.nickName;
+
+        //パーミッション設定
+        setAcl();
     }
 
     /** コンストラクタ
@@ -109,10 +100,18 @@ public class User implements NCMBObjectInterface {
     public User(final NCMBUser src){
         this.user = src;
         this.user.setObjectId(src.getObjectId());
+        try{
+            this.user.fetch();
+        } catch (NCMBException e) {
+            e.printStackTrace();
+        }
+
         this.userName = src.getUserName();
         if(src.containsKey(KEY_NICK_NAME)){
             this.nickName = src.getString(KEY_NICK_NAME);
         }
+        //パーミッション設定
+        setAcl();
     }
 
     /** ユーザー名を取得
@@ -151,6 +150,17 @@ public class User implements NCMBObjectInterface {
         return this.nickName;
     }
 
+
+    /** パーミッション設定
+     *
+     */
+    private void setAcl(){
+        NCMBAcl acl = new NCMBAcl();
+        acl.setPublicReadAccess(true);
+        acl.setPublicWriteAccess(true);
+        this.user.setAcl(acl);
+    }
+
     /** NCMBObject に変換
      *
      * @return
@@ -158,10 +168,8 @@ public class User implements NCMBObjectInterface {
     @Override
     public NCMBObject toNCMBObject(){
 
-        //パーミッションを設定
-        NCMBAcl acl = new NCMBAcl();
-        acl.setPublicReadAccess(true);
-        this.user.setAcl(acl);
+        //パーミッション設定
+        setAcl();
 
         return this.user;
     }
