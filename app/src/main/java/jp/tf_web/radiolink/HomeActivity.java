@@ -10,6 +10,7 @@ import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.hardware.SensorEvent;
 import android.media.AudioManager;
+import android.os.Build;
 import android.os.Handler;
 import android.util.Log;
 import android.view.View;
@@ -69,7 +70,10 @@ public class HomeActivity extends Activity
     private Handler handler;
 
     //メインのレイアウト
-    public LinearLayout mainLayout;
+    private LinearLayout mainLayout;
+
+    //ログ表示用テキスト
+    private TextView tv;
 
     //Bluetoothヘッドセットへの接続等
     private BluetoothAudioDeviceManager bluetoothAudioDeviceManager;
@@ -98,6 +102,15 @@ public class HomeActivity extends Activity
     //API処理をするユーテリティ
     private NCMBUtil ncmbUtil;
 
+    //ローカルIP,ポート
+    private InetSocketAddress localAddr;
+
+    //パブリックIP,ポート
+    private InetSocketAddress publicAddr;
+
+    //選択中のチャンネル
+    private Channel activeChannel;
+
     @Override
     public void onCreate(Bundle savedInstanceState)
     {
@@ -106,11 +119,13 @@ public class HomeActivity extends Activity
 
         Log.d(TAG, "onCreate()");
 
+        Log.d(TAG, " DEVICE:"+Build.DEVICE+" MODEL:"+Build.MODEL);
+
         handler = new Handler();
 
         mainLayout = (LinearLayout) findViewById(R.id.mainLayout);
 
-        TextView tv = (TextView)findViewById(R.id.txtView);
+        tv = (TextView)findViewById(R.id.txtView);
         tv.setText(R.string.app_name);
 
         Button btnStart = (Button) findViewById(R.id.btnStart);
@@ -234,6 +249,8 @@ public class HomeActivity extends Activity
             public void onResult(final String address) {
                 Log.d(TAG,"local IpAddress:"+address);
 
+                localAddr = new InetSocketAddress(address,Config.BIND_PORT);
+
                 //UDPサービス START
                 Map<String,Object> params = new HashMap<String,Object>(){
                     {
@@ -323,9 +340,9 @@ public class HomeActivity extends Activity
 
         @Override
         public void onClick(View v) {
-            String name = "testuser";
+            String name = Build.MODEL;
             String password = "password";
-            String nickname = "testuser nickname";
+            String nickname = Build.DEVICE;
 
             User user = new User(name, password);
             user.setNickName(nickname);
@@ -350,7 +367,7 @@ public class HomeActivity extends Activity
 
         @Override
         public void onClick(View v) {
-            String name = "testuser";
+            String name = Build.MODEL;
             String password = "password";
 
             ncmbUtil.login(new User(name, password), new LoginListener() {
@@ -407,7 +424,7 @@ public class HomeActivity extends Activity
                     Bitmap bmp = BitmapFactory.decodeResource(getResources(), R.drawable.dummy);
                     byte[] data = BitmapUtil.bmp2byteArray(bmp, Bitmap.CompressFormat.JPEG);
                     String extension = Bitmap.CompressFormat.JPEG.name();
-                    Log.d(TAG, "data size:"+data.length+" extension:" + extension);
+                    Log.d(TAG, "data size:" + data.length + " extension:" + extension);
 
                     ncmbUtil.saveChannelIcon(channel, data, new SetChannelIconImageListener() {
                         @Override
@@ -438,41 +455,63 @@ public class HomeActivity extends Activity
                 @Override
                 public void success(List<Channel> channels) {
                     Log.d(TAG, "getChannelList success size:" + channels.size());
-                    if(channels.size() == 0) return;
+                    if (channels.size() == 0) return;
 
                     //チャンネルユーザーを追加
                     final Channel c = channels.get(0);
-                    InetSocketAddress publicAddr = new InetSocketAddress("192.168.0.1",9999);
-                    InetSocketAddress localAddr = new InetSocketAddress("127.0.0.1",8080);
-                    ChannelUser cu1 = new ChannelUser(c,"ニックネーム1",publicAddr,localAddr);
-                    c.addChannelUser(cu1);
 
-                    ChannelUser cu2 = new ChannelUser(c,"ニックネーム2",publicAddr,localAddr);
-                    c.addChannelUser(cu2);
-
-                    //チャンネルユーザー一覧を更新
-                    ncmbUtil.updateChannelUserList(c, new UpdateChannelUserListener() {
+                    //チャンネルユーザー一覧を取得
+                    ncmbUtil.getChannelUserList(c, new GetChannelUserListListener() {
                         @Override
-                        public void success(Channel channel) {
-                            Log.d(TAG, "updateChannelUserList success");
+                        public void success(final Channel channel) {
+                            Log.d(TAG, "getChannelUserList success size:" + channel.getChannelUserList().size());
 
-                            //チャンネルユーザー一覧を取得
-                            ncmbUtil.getChannelUserList(c, new GetChannelUserListListener() {
+                            Log.d(TAG, "channel user:" + channel.getUser().getUserName());
+
+                            {
+                                InetSocketAddress publicAddr = new InetSocketAddress("192.168.0.1", 9999);
+                                InetSocketAddress localAddr = new InetSocketAddress("127.0.0.1", 8080);
+                                ChannelUser cu1 = new ChannelUser(channel, "ニックネーム1", publicAddr, localAddr);
+
+                                Log.d(TAG, "cu1 user:" + cu1.channel.getUser());
+                                channel.addChannelUser(cu1);
+                            }
+                            {
+                                InetSocketAddress publicAddr = new InetSocketAddress("192.168.0.2", 9999);
+                                InetSocketAddress localAddr = new InetSocketAddress("127.0.0.1", 8080);
+                                ChannelUser cu2 = new ChannelUser(channel, "ニックネーム2", publicAddr, localAddr);
+                                channel.addChannelUser(cu2);
+                            }
+                            //チャンネルユーザー一覧を更新
+                            ncmbUtil.updateChannelUserList(channel, new UpdateChannelUserListener() {
                                 @Override
-                                public void success(List<ChannelUser> channelUsers) {
-                                    Log.d(TAG, "getChannelUserList success size:" + channelUsers.size());
+                                public void success(Channel channel) {
+                                    Log.d(TAG, "updateChannelUserList success");
+
+                                    //チャンネルユーザー一覧を取得
+                                    ncmbUtil.getChannelUserList(channel, new GetChannelUserListListener() {
+                                        @Override
+                                        public void success(final Channel channel) {
+                                            Log.d(TAG, "getChannelUserList success size:" + channel.getChannelUserList().size());
+                                        }
+
+                                        @Override
+                                        public void error(NCMBException e) {
+                                            Log.e(TAG, "getChannelUserList error " + e);
+                                        }
+                                    });
                                 }
 
                                 @Override
                                 public void error(NCMBException e) {
-                                    Log.e(TAG, "getChannelUserList error " + e);
+                                    Log.e(TAG, "updateChannelUserList error " + e);
                                 }
                             });
                         }
 
                         @Override
                         public void error(NCMBException e) {
-                            Log.e(TAG, "updateChannelUserList error " + e);
+                            Log.e(TAG, "getChannelUserList error " + e);
                         }
                     });
                 }
@@ -517,9 +556,17 @@ public class HomeActivity extends Activity
          */
         @Override
         public void onAudioRecord(final byte[] data,final int size,final short volume) {
-            //録音結果を受け取る
+            if(activeChannel == null) return;
+
+            handler.post(new Runnable() {
+                @Override
+                public void run() {
+                    //Log.d(TAG, "volume:"+volume);
+                    tv.setText("volume:" + volume);
+                }
+            });
             //TODO: volume閾値での簡易VAD
-            if(volume < 200){
+            if(volume < 600){
                 //仮でVAD識別の為に背景色を変更
                 setBackgroundColor(Color.RED);
                 return;
@@ -532,8 +579,8 @@ public class HomeActivity extends Activity
             //OPUSエンコード
             byte[] opus = opusManager.encode(data);
             if(opus.length > 1) {
-                //UDPで送信
-                udpServiceSendByteArray("192.168.0.9", Config.BIND_PORT, opus);
+                //UDPでチャンネルの全てのユーザーに送信
+                udpServiceSendByteArray(opus);
             }
 
             //仮でエコーしてみる
@@ -651,19 +698,41 @@ public class HomeActivity extends Activity
 
     /** UDPサービスに byte[]データを送信
      *
-     * @param addr 送信先ホストアドレス
-     * @param port ポート
      * @param src  byte[]データ
      */
-    private void udpServiceSendByteArray(final String addr,final int port,final byte[] src){
-        //サービスにデータを送信
+    private void udpServiceSendByteArray(final byte[] src){
+        if(activeChannel == null) return;
+        //データを送信
+        String publicIp = publicAddr.getAddress().getHostAddress();
+        int publicPort = publicAddr.getPort();
+        for(ChannelUser cu:activeChannel.getChannelUserList()){
+            //自分以外に送信
+            String ip = cu.publicSocketAddress.getAddress().getHostAddress();
+            //Log.d(TAG,"ip:"+ip+" publicIp:"+publicIp);
+            if((ip.equals(publicIp)) && (publicPort == cu.publicSocketAddress.getPort())){
+                break;
+            }
+            //送信
+            udpServiceSendByteArray(cu,src);
+        }
+    }
+
+    /** UDPサービスに byte[]データを送信
+     *
+     * @param channelUser チャンネルユーザー
+     * @param src  byte[]データ
+     */
+    private void udpServiceSendByteArray(final ChannelUser channelUser,final byte[] src){
+        //データを送信
         Map<String,Object> params = new HashMap<String,Object>(){
             {
-                put(UDPService.KEY_NAME_CONNECT_HOST, addr);
-                put(UDPService.KEY_NAME_CONNECT_PORT, Integer.valueOf(port));
+                //送信先パブリックIP,ポート
+                put(UDPService.KEY_NAME_CONNECT_HOST, channelUser.publicSocketAddress.getAddress().getHostAddress());
+                put(UDPService.KEY_NAME_CONNECT_PORT, Integer.valueOf(channelUser.publicSocketAddress.getPort()));
 
-                put(UDPService.KEY_NAME_SEND_HOST, addr);
-                put(UDPService.KEY_NAME_SEND_PORT, Integer.valueOf(port));
+                //送信先ローカルIPポート
+                put(UDPService.KEY_NAME_SEND_HOST, channelUser.localSocketAddress.getAddress().getHostAddress());
+                put(UDPService.KEY_NAME_SEND_PORT, Integer.valueOf(channelUser.localSocketAddress.getPort()));
 
                 put(UDPService.KEY_NAME_SEND_BUFFER, src);
             }
@@ -673,6 +742,98 @@ public class HomeActivity extends Activity
 
     //ブロードキャストレシーバーから受信したイベントを受け取る
     private UDPServiceListener udpServiceListener = new UDPServiceListener(){
+
+        /** STUN Binding 結果を通知
+         *
+         * @param publicSocketAddr パブリックIP,ポート
+         */
+        @Override
+        public void onStunBinding(final InetSocketAddress publicSocketAddr){
+
+            Runnable work = new Runnable() {
+                @Override
+                public void run() {
+                    addChannelUser(publicSocketAddr);
+                }
+            };
+
+            handler.post(work);
+        }
+
+        private void addChannelUser(final InetSocketAddress publicSocketAddr){
+            ncmbUtil.getChannelList(new GetChannelListListener() {
+                @Override
+                public void success(List<Channel> channels) {
+                    Log.d(TAG, "getChannelList success size:" + channels.size());
+                    if (channels.size() == 0) return;
+
+                    //チャンネルユーザーを追加
+                    final Channel c = channels.get(0);
+
+                    String nickname = Build.DEVICE;
+                    final ChannelUser cu = new ChannelUser(c, nickname, publicSocketAddr, localAddr);
+
+                    //パブリックIP,ポートを保存
+                    publicAddr = publicSocketAddr;
+
+                    //チャンネルユーザー一覧を取得
+                    ncmbUtil.getChannelUserList(c, new GetChannelUserListListener() {
+                        @Override
+                        public void success(final Channel channel) {
+                            channel.addChannelUser(cu);
+
+                            //delay後に チャンネルユーザー一覧を更新
+                            //TODO: user 等の fetch が終わらないと処理に失敗するので delayを入れる
+                            int delay = 1000 * channel.getChannelUserList().size();
+                            handler.postDelayed(new Runnable() {
+                                @Override
+                                public void run() {
+                                    //チャンネルユーザー一覧を更新
+                                    ncmbUtil.updateChannelUserList(channel, new UpdateChannelUserListener() {
+                                        @Override
+                                        public void success(Channel channel) {
+                                            Log.d(TAG, "updateChannelUserList success");
+                                            Toast.makeText(getApplicationContext(),"success",Toast.LENGTH_SHORT).show();
+
+                                            //チャンネルユーザー一覧を取得して送信対象とする
+                                            ncmbUtil.getChannelUserList(channel, new GetChannelUserListListener() {
+                                                @Override
+                                                public void success(final Channel channel) {
+                                                    Log.d(TAG, "getChannelUserList success size:" + channel.getChannelUserList().size());
+                                                    //選択中のチャンネルを設定
+                                                    activeChannel = channel;
+                                                }
+
+                                                @Override
+                                                public void error(NCMBException e) {
+                                                    Log.e(TAG, "getChannelUserList error " + e);
+                                                }
+                                            });
+
+                                        }
+
+                                        @Override
+                                        public void error(NCMBException e) {
+                                            Log.e(TAG, "updateChannelUserList error " + e);
+                                        }
+                                    });
+                                }
+                            },delay);
+                        }
+
+                        @Override
+                        public void error(NCMBException e) {
+                            Log.e(TAG, "getChannelUserList error " + e);
+                        }
+                    });
+                }
+
+                @Override
+                public void error(NCMBException e) {
+                    Log.e(TAG, "getChannelList error " + e);
+                }
+            });
+        }
 
         /** UDPServiceから届いいた メッセージを受信した場合
          *

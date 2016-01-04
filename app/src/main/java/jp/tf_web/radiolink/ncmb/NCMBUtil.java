@@ -292,11 +292,10 @@ public class NCMBUtil {
      */
     public void updateChannelUserList(final Channel channel,final UpdateChannelUserListener listener){
         //チャンネルユーザー一覧を保存
-        final List<NCMBObject> childs = new ArrayList<>();
-        for(final ChannelUser cu:channel.getChannelUserList()){
+        for(ChannelUser cu:channel.getChannelUserList()){
             try {
+                Log.d(TAG,"cu "+cu.channel+" user:"+cu.channel.getUser());
                 cu.toNCMBObject().save();
-                childs.add(cu.toNCMBObject());
             } catch (NCMBException e) {
                 e.printStackTrace();
             }
@@ -316,18 +315,19 @@ public class NCMBUtil {
         NCMBQuery<NCMBObject> subQuery = new NCMBQuery<>(Channel.OBJ_NAME);
         subQuery.whereEqualTo(Channel.KEY_CHANNEL_CODE,channel.getChannelCode());
         query.whereMatchesQuery(ChannelUser.KEY_CHANNEL, subQuery);
-
         query.findInBackground(new FindCallback<NCMBObject>() {
 
             @Override
             public void done(List<NCMBObject> list, NCMBException e) {
                 if(e == null){
                     //成功
+                    //チャンネルユーザーを更新
                     List<ChannelUser> channelUsers = new ArrayList<ChannelUser>();
                     for(NCMBObject c:list){
                         channelUsers.add(new ChannelUser(c));
                     }
-                    listener.success(channelUsers);
+                    channel.setChannelUserList(channelUsers);
+                    listener.success(channel);
                 }else{
                     //失敗
                     listener.error(e);

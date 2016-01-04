@@ -40,8 +40,8 @@ public class Config {
     public static final String STUN_SERVER_NAME = "stun.l.google.com";
     public static final int STUN_SERVER_PORT = 19302;
 
-    //STUNサーバからのレスポンスを受け取るポート
-    public static final int BIND_PORT = 19303;
+    //UDPからの受信に使うポート
+    public static final int BIND_PORT = 55560;
 
     //ニフティクラウド mobile backend アプリケーションキー
     public static final String NCMB_APP_KEY = PrivateConfig.NCMB_APP_KEY;

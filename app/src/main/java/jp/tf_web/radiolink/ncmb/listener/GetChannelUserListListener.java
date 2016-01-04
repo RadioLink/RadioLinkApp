@@ -13,9 +13,9 @@ import jp.tf_web.radiolink.ncmb.db.ChannelUser;
 public interface GetChannelUserListListener {
     /**  成功
      *
-     * @param channelUsers
+     * @param channel
      */
-    void success(List<ChannelUser> channelUsers);
+    void success(final Channel channel);
 
     /** 失敗
      *

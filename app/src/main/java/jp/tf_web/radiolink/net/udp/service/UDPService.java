@@ -39,11 +39,13 @@ public class UDPService extends Service {
     public static String KEY_NAME_BIND_ADDRESS   = "bind_address";
     public static String KEY_NAME_BIND_PORT      = "bind_port";
     public static String KEY_NAME_RECEIVE_BUFFER = "receive_buffer";
+    public static String KEY_NAME_PUBLIC_SOCKET_ADDR = "public_socket_addr";
 
-    public static String CMD_START = "start";
-    public static String CMD_STOP = "stop";
-    public static String CMD_SEND = "send";
-    public static String CMD_RECEIVE = "receive";
+    public static String CMD_START      = "start";
+    public static String CMD_STOP       = "stop";
+    public static String CMD_SEND       = "send";
+    public static String CMD_RECEIVE    = "receive";
+    public static String CMD_STUN_BINDING = "stun_binding";
 
     //各処理をする Executor
     private ExecutorService executor;
@@ -115,6 +117,10 @@ public class UDPService extends Service {
                 if(buf != null) {
                     broadcastIntent.putExtra(KEY_NAME_RECEIVE_BUFFER, buf);
                 }
+            }
+            else if(cmd.equals(CMD_STUN_BINDING)){
+                InetSocketAddress publicSocketAddr = (InetSocketAddress) params.get(KEY_NAME_PUBLIC_SOCKET_ADDR);
+                broadcastIntent.putExtra(KEY_NAME_PUBLIC_SOCKET_ADDR, publicSocketAddr);
             }
         }
         context.sendBroadcast(broadcastIntent);
@@ -275,6 +281,26 @@ public class UDPService extends Service {
      *
      */
     private UDPReceiverListener udpReceiverListener = new UDPReceiverListener(){
+
+        /** STUN Binding 結果を通知
+         *
+         * @param publicSocketAddr パブリックIP,ポート
+         */
+        @Override
+        public void onStunBinding(final InetSocketAddress publicSocketAddr){
+            Log.d(TAG, "onStunBinding");
+            if (publicSocketAddr != null) {
+                Log.d(TAG, "public ip:" + publicSocketAddr.getAddress().getHostAddress() + " port:" + publicSocketAddr.getPort());
+            }
+
+            //ブロードキャストレシーバーに通知
+            Map<String,Object> params = new HashMap<String,Object>(){
+                {
+                    put(UDPService.KEY_NAME_PUBLIC_SOCKET_ADDR, publicSocketAddr);
+                }
+            };
+            sendOnReceive(getApplicationContext(),CMD_STUN_BINDING,params);
+        }
 
         /** パケットを受信した時
          *

@@ -32,6 +32,19 @@ public class UDPReceiver {
     private Bootstrap udpbs;
     private Channel channel;
 
+    //ステータス型
+    private enum Status{
+        //初期値
+        INITIAL,
+        //STUNリクエスト送信中
+        STUN_SENDING,
+        //実行中
+        ACTIVE
+    };
+
+    //ステータス
+    private Status status = Status.INITIAL;
+
     /** コンストラクタ
      *
      * @param bindIaddress ローカルアドレス
@@ -69,6 +82,7 @@ public class UDPReceiver {
                 .handler(new UDPInboundHandlerAdapter(listener))
                 .bind(this.bindSocketAddress);
     }
+
     /** 閉じる
      *
      */
@@ -76,6 +90,33 @@ public class UDPReceiver {
         if(udpbs == null) return;
         udpbs.clone();
         udpbs = null;
+        setStatus(Status.INITIAL);
+    }
+
+    /** ステータスを設定する
+     *
+     * @param status
+     */
+    private void setStatus(Status status){
+        switch (status){
+            case STUN_SENDING:
+                //STUN binding リクエストを送る
+                sendStunBinding();
+                break;
+            case ACTIVE:
+                //メイン処理をするステータス
+                break;
+        }
+        this.status = status;
+    }
+
+    //STUN binding リクエストを送る
+    private void sendStunBinding(){
+        StunProtocolUtil.binding(channel,
+                Config.STUN_SERVER_NAME,
+                Config.STUN_SERVER_PORT,
+                bindSocketAddress.getAddress().getHostAddress(),
+                bindSocketAddress.getPort());
     }
 
     /** 送信
@@ -87,8 +128,8 @@ public class UDPReceiver {
     public void writeUDP(final InetSocketAddress connectAddr,InetSocketAddress addr,byte[] data) {
         if(channel == null) return;
         Log.d(TAG, "writeUDP data:" + ByteArrayUtil.toHexString(data));
+        Log.d(TAG,"  connectAddr:"+ connectAddr.getAddress().getHostAddress()+":"+connectAddr.getPort());
         Log.d(TAG,"         addr:"+ addr.getAddress().getHostAddress()+":"+addr.getPort());
-        Log.d(TAG,"         remoteAddress:"+ channel.remoteAddress());
 
         //パケット内容
         ByteBuf src = Unpooled.copiedBuffer(data);
@@ -110,6 +151,7 @@ public class UDPReceiver {
         UDPInboundHandlerAdapter(final UDPReceiverListener listener) {
             //リスナーを設定
             this.listener = listener;
+            setStatus(Status.INITIAL);
         }
 
         @Override
@@ -118,11 +160,7 @@ public class UDPReceiver {
             channel = ctx.channel();
 
             //STUN 処理を実行して public IP,PORTを取得する
-            StunProtocolUtil.binding(channel,
-                    Config.STUN_SERVER_NAME,
-                    Config.STUN_SERVER_PORT,
-                    bindSocketAddress.getAddress().getHostAddress(),
-                    bindSocketAddress.getPort());
+            setStatus(Status.STUN_SENDING);
         }
 
         /** UDPでデータが届いた時
@@ -141,13 +179,15 @@ public class UDPReceiver {
             packet.content().getBytes(0,data);
             Log.d(TAG, "data length:" + data.length + " " + ByteArrayUtil.toHexString(data));
 
-            //TODO:毎回
-            InetSocketAddress publicSocketAddr = StunProtocolUtil.parsePublicInetSocketAddress(data);
-            if(publicSocketAddr != null) {
-                //STUN 処理に成功 パブリック IP,ポートの取得に成功
-                Log.d(TAG, "public ip:" + publicSocketAddr.getAddress().getHostAddress() + " port:" + publicSocketAddr.getPort());
+            if(status == Status.STUN_SENDING) {
+                //STUN 成功 パブリック IP,ポートを通知
+                //STUN 失敗 null を通知
+                InetSocketAddress publicSocketAddr = StunProtocolUtil.parsePublicInetSocketAddress(data);
+                listener.onStunBinding(publicSocketAddr);
+                //通常ステータスに移行
+                setStatus(Status.ACTIVE);
             }
-            else {
+            else if(status == Status.ACTIVE) {
                 //リスナーに受信データを通知する
                 if (this.listener != null) {
                     this.listener.onReceive(ctx, packet, data);

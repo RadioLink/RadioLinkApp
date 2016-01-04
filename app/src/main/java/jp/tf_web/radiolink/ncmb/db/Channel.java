@@ -3,6 +3,7 @@ package jp.tf_web.radiolink.ncmb.db;
 import android.util.Log;
 
 import com.nifty.cloud.mb.core.FetchCallback;
+import com.nifty.cloud.mb.core.NCMBAcl;
 import com.nifty.cloud.mb.core.NCMBBase;
 import com.nifty.cloud.mb.core.NCMBException;
 import com.nifty.cloud.mb.core.NCMBFile;
@@ -12,6 +13,7 @@ import com.nifty.cloud.mb.core.NCMBUser;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -74,6 +76,10 @@ public class Channel implements NCMBObjectInterface {
                         user = new User(ncmbBase.getJSONObject(KEY_USER));
                         channelCode = ncmbBase.getString(KEY_CHANNEL_CODE);
                     }
+                    else{
+                        e.printStackTrace();
+                        Log.e(TAG,"Channel(JSONObject) fetchInBackground　error "+e);
+                    }
                 }
             });
         } catch (JSONException e) {
@@ -86,9 +92,31 @@ public class Channel implements NCMBObjectInterface {
      * @param src
      */
     public Channel(final NCMBObject src){
-        obj = src;
+        obj = new NCMBObject(OBJ_NAME);
+        obj.setObjectId(src.getObjectId());
+        obj.fetchInBackground(new FetchCallback() {
+            @Override
+            public void done(NCMBBase ncmbBase, NCMBException e) {
+                if (e == null) {
+                    user = new User(ncmbBase.getJSONObject(KEY_USER));
+                } else {
+                    e.printStackTrace();
+                    Log.e(TAG, "Channel(NCMBObject) fetchInBackground　error " + e);
+                }
+            }
+        });
         user = new User(src.getJSONObject(KEY_USER));
         channelCode = src.getString(KEY_CHANNEL_CODE);
+    }
+
+    /** コンストラクタ
+     *
+     * @param src
+     */
+    public Channel(final Channel src){
+        obj = src.toNCMBObject();
+        user = new User(src.user);
+        channelCode = src.getChannelCode();
     }
 
     /** ユーザー取得
@@ -132,9 +160,26 @@ public class Channel implements NCMBObjectInterface {
      */
     public void addChannelUser(final ChannelUser channelUser){
         if(this.channelUserList == null){
-            this.channelUserList = new ArrayList<>();
+            this.channelUserList = new ArrayList<ChannelUser>();
         }
-        this.channelUserList.add(channelUser);
+        //自分がチャンネルに登録済みの場合更新する
+        boolean flg = true;
+        for(ChannelUser cu:this.channelUserList){
+            InetSocketAddress tmp = cu.publicSocketAddress;
+            String addr = tmp.getAddress().getHostAddress();
+            int port = tmp.getPort();
+            if((addr.equals(channelUser.publicSocketAddress.getAddress().getHostAddress()))
+                &&(port == channelUser.publicSocketAddress.getPort())){
+                //更新
+                cu.copy(channelUser);
+                flg = false;
+                break;
+            }
+        }
+        if(flg == true) {
+            //新規追加
+            this.channelUserList.add(channelUser);
+        }
     }
 
     public void deleteChannelUser(final ChannelUser channelUser){
@@ -142,6 +187,14 @@ public class Channel implements NCMBObjectInterface {
             return;
         }
         this.channelUserList.remove(channelUser);
+    }
+
+    /** チャンネルユーザーを設定
+     *
+     * @param channelUserList
+     */
+    public void setChannelUserList(List<ChannelUser> channelUserList){
+        this.channelUserList = channelUserList;
     }
 
     /** チャンネルユーザー一覧を取得
@@ -159,8 +212,16 @@ public class Channel implements NCMBObjectInterface {
     @Override
     public NCMBObject toNCMBObject(){
         if(obj == null) obj = new NCMBObject(OBJ_NAME);
-        obj.put(KEY_USER, (NCMBUser) this.user.toNCMBObject());
-        obj.put(KEY_CHANNEL_CODE, this.channelCode);
+
+        /*
+        //パーミッションを設定
+        NCMBAcl acl = new NCMBAcl();
+        acl.setPublicReadAccess(true);
+        acl.setPublicWriteAccess(true);
+        obj.setAcl(acl);
+*/
+        obj.put(KEY_USER, (NCMBUser) user.toNCMBObject());
+        obj.put(KEY_CHANNEL_CODE, channelCode);
         return obj;
     }
 }

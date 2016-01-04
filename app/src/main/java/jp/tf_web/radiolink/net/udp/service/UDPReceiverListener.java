@@ -1,5 +1,7 @@
 package jp.tf_web.radiolink.net.udp.service;
 
+import java.net.InetSocketAddress;
+
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.socket.DatagramPacket;
 
@@ -9,11 +11,17 @@ import io.netty.channel.socket.DatagramPacket;
  */
 public interface UDPReceiverListener {
 
+    /** STUN Binding 結果を通知
+     *
+     * @param publicSocketAddr パブリックIP,ポート
+     */
+    void onStunBinding(final InetSocketAddress publicSocketAddr);
+
     /** 受信したデータを通知
      *
      * @param ctx
      * @param packet
      * @param data
      */
-    public void onReceive(final ChannelHandlerContext ctx,final DatagramPacket packet,final byte[] data);
+    void onReceive(final ChannelHandlerContext ctx,final DatagramPacket packet,final byte[] data);
 }

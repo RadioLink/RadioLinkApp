@@ -50,11 +50,6 @@ public class User implements NCMBObjectInterface {
         this.user.setUserName(userName);
         this.user.setPassword(password);
 
-        //パーミッションを設定
-        NCMBAcl acl = new NCMBAcl();
-        acl.setPublicReadAccess(true);
-        this.user.setAcl(acl);
-
         this.userName = userName;
         this.password = password;
     }
@@ -71,10 +66,52 @@ public class User implements NCMBObjectInterface {
                         userName = ncmbBase.getString(KEY_USER_NAME);
                         nickName = ncmbBase.getString(KEY_NICK_NAME);
                     }
+                    else{
+                        //エラー
+                        e.printStackTrace();
+                        Log.e(TAG, "error "+e);
+                    }
                 }
             });
         } catch (JSONException e) {
             e.printStackTrace();
+        }
+    }
+
+    /** コンストラクタ
+     *
+     * @param src
+     */
+    public User(final User src){
+        this(src.userName, src.password);
+        String objectId = src.user.getObjectId();
+        //Log.d(TAG, " objectId:" + objectId);
+        this.user.setObjectId(objectId);
+        this.user.fetchInBackground(new FetchCallback() {
+            @Override
+            public void done(NCMBBase ncmbBase, NCMBException e) {
+                if(e == null){
+                    //成功
+                }
+                else{
+                    e.printStackTrace();
+                    Log.e(TAG,"error e:"+e);
+                }
+            }
+        });
+        this.nickName = src.nickName;
+    }
+
+    /** コンストラクタ
+     *
+     * @param src
+     */
+    public User(final NCMBUser src){
+        this.user = src;
+        this.user.setObjectId(src.getObjectId());
+        this.userName = src.getUserName();
+        if(src.containsKey(KEY_NICK_NAME)){
+            this.nickName = src.getString(KEY_NICK_NAME);
         }
     }
 
@@ -114,25 +151,18 @@ public class User implements NCMBObjectInterface {
         return this.nickName;
     }
 
-    /** コンストラクタ
-     *
-     * @param user
-     */
-    public User(NCMBUser user){
-        this.user = user;
-
-        this.userName = user.getUserName();
-        if(user.containsKey(KEY_NICK_NAME)){
-            this.nickName = user.getString(KEY_NICK_NAME);
-        }
-    }
-
     /** NCMBObject に変換
      *
      * @return
      */
     @Override
     public NCMBObject toNCMBObject(){
-        return user;
+
+        //パーミッションを設定
+        NCMBAcl acl = new NCMBAcl();
+        acl.setPublicReadAccess(true);
+        this.user.setAcl(acl);
+
+        return this.user;
     }
 }
