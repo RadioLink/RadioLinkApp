@@ -46,8 +46,10 @@ import jp.tf_web.radiolink.ncmb.db.ChannelUser;
 import jp.tf_web.radiolink.ncmb.db.User;
 import jp.tf_web.radiolink.ncmb.listener.CreateChannelListener;
 import jp.tf_web.radiolink.ncmb.listener.DeleteChannelListener;
+import jp.tf_web.radiolink.ncmb.listener.ExitChannelUserlistener;
 import jp.tf_web.radiolink.ncmb.listener.GetChannelListListener;
 import jp.tf_web.radiolink.ncmb.listener.GetChannelUserListListener;
+import jp.tf_web.radiolink.ncmb.listener.JoinChannelUserlistener;
 import jp.tf_web.radiolink.ncmb.listener.LoginListener;
 import jp.tf_web.radiolink.ncmb.listener.LogoutListener;
 import jp.tf_web.radiolink.ncmb.listener.SetChannelIconImageListener;
@@ -128,11 +130,21 @@ public class HomeActivity extends Activity
         tv = (TextView)findViewById(R.id.txtView);
         tv.setText(R.string.app_name);
 
+        //開始
         Button btnStart = (Button) findViewById(R.id.btnStart);
         btnStart.setOnClickListener(this.btnStartOnClickListener);
 
+        //停止
         Button btnStop = (Button) findViewById(R.id.btnStop);
         btnStop.setOnClickListener(this.btnStopOnClickListener);
+
+        //Channelに入る
+        Button btnChannelJoin = (Button) findViewById(R.id.btnChannelJoin);
+        btnChannelJoin.setOnClickListener(this.btnChannelJoinOnClickListener);
+
+        //Channelから出る
+        Button btnChannelExit = (Button) findViewById(R.id.btnChannelExit);
+        btnChannelExit.setOnClickListener(this.btnChannelExitOnClickListener);
 
         //アイテム購入ボタン
         Button btnInAppBilling = (Button)findViewById(R.id.btnInAppBilling);
@@ -324,6 +336,100 @@ public class HomeActivity extends Activity
         }
     };
 
+
+    //Channel Join ボタンクリック時
+    private View.OnClickListener btnChannelJoinOnClickListener = new View.OnClickListener() {
+        @Override
+        public void onClick(View v) {
+            //チャンネル一覧から 一番新しいチャンネルを選択する
+            ncmbUtil.getChannelList(new GetChannelListListener() {
+                @Override
+                public void success(List<Channel> channels) {
+                    Log.d(TAG, "getChannelList success size:" + channels.size());
+                    if (channels.size() == 0) return;
+
+                    //仮で一番新しいチャンネルを選択
+                    final Channel c = channels.get(0);
+
+                    //チャンネルに JOIN する
+                    ncmbUtil.joinChannelUser(c, publicAddr, localAddr, new JoinChannelUserlistener() {
+                        /** 成功
+                         *
+                         * @param channel
+                         */
+                        @Override
+                        public void success(final Channel channel) {
+                            //JOINに成功
+                            activeChannel = channel;
+                            Toast.makeText(getApplicationContext(), "JOIN!", Toast.LENGTH_SHORT).show();
+                            //TODO: GCM 通知
+                        }
+
+                        /** 失敗
+                         *
+                         * @param e
+                         */
+                        @Override
+                        public void error(NCMBException e) {
+                            Log.e(TAG, "error:" + e);
+                        }
+                    });
+                }
+
+                @Override
+                public void error(NCMBException e) {
+                    Log.e(TAG, "getChannelList error " + e);
+                }
+            });
+
+        }
+    };
+
+    //Channel Exit ボタンクリック時
+    private View.OnClickListener btnChannelExitOnClickListener = new View.OnClickListener() {
+        @Override
+        public void onClick(View v) {
+            //チャンネル一覧から 一番新しいチャンネルを選択する
+            ncmbUtil.getChannelList(new GetChannelListListener() {
+                @Override
+                public void success(List<Channel> channels) {
+                    Log.d(TAG, "getChannelList success size:" + channels.size());
+                    if (channels.size() == 0) return;
+
+                    //仮で一番新しいチャンネルを選択
+                    final Channel c = channels.get(0);
+
+                    //チャンネルに Exit する
+                    ncmbUtil.exitChannelUser(c, publicAddr, localAddr, new ExitChannelUserlistener() {
+                        /** 成功
+                         *
+                         */
+                        @Override
+                        public void success() {
+                            //EXIT に成功
+                            activeChannel = null;
+                            Toast.makeText(getApplicationContext(), "EXIT!", Toast.LENGTH_SHORT).show();
+                            //TODO: GCM 通知
+                        }
+
+                        /** 失敗
+                         *
+                         * @param e
+                         */
+                        @Override
+                        public void error(NCMBException e) {
+                            Log.e(TAG, "error:" + e);
+                        }
+                    });
+                }
+
+                @Override
+                public void error(NCMBException e) {
+                    Log.e(TAG, "getChannelList error " + e);
+                }
+            });
+        }
+    };
 
     //購入ボタン クリック時
     private View.OnClickListener btnInAppBillingOnClickListener = new View.OnClickListener() {
@@ -594,10 +700,6 @@ public class HomeActivity extends Activity
                 //UDPでチャンネルの全てのユーザーに送信
                 udpServiceSendByteArray(opus);
             }
-
-            //仮でエコーしてみる
-            //Log.d(TAG, "onAudioRecord data:" + data.length + " size:" + size + " volume:" + volume);
-            //trackManager.write(data, 0, size);
         }
     };
 
@@ -763,93 +865,9 @@ public class HomeActivity extends Activity
          */
         @Override
         public void onStunBinding(final InetSocketAddress publicSocketAddr){
-
-            Runnable work = new Runnable() {
-                @Override
-                public void run() {
-                    addChannelUser(publicSocketAddr);
-                }
-            };
-
-            handler.post(work);
-        }
-
-        private void addChannelUser(final InetSocketAddress publicSocketAddr){
-
-            //ログイン中のユーザーを取得
-            final User currentUser = ncmbUtil.getCurrentUser();
-
-            ncmbUtil.getChannelList(new GetChannelListListener() {
-                @Override
-                public void success(List<Channel> channels) {
-                    Log.d(TAG, "getChannelList success size:" + channels.size());
-                    if (channels.size() == 0) return;
-
-                    //チャンネルユーザーを追加
-                    final Channel c = channels.get(0);
-
-                    final ChannelUser cu = new ChannelUser(c, currentUser, publicSocketAddr, localAddr);
-
-                    //パブリックIP,ポートを保存
-                    publicAddr = publicSocketAddr;
-
-                    //チャンネルユーザー一覧を取得
-                    ncmbUtil.getChannelUserList(c, new GetChannelUserListListener() {
-                        @Override
-                        public void success(final Channel channel) {
-                            channel.addChannelUser(cu);
-
-                            //delay後に チャンネルユーザー一覧を更新
-                            //TODO: user 等の fetch が終わらないと処理に失敗するので delayを入れる
-                            int delay = 1000 * channel.getChannelUserList().size();
-                            handler.postDelayed(new Runnable() {
-                                @Override
-                                public void run() {
-                                    //チャンネルユーザー一覧を更新
-                                    ncmbUtil.updateChannelUserList(channel, new UpdateChannelUserListener() {
-                                        @Override
-                                        public void success(Channel channel) {
-                                            Log.d(TAG, "updateChannelUserList success");
-                                            Toast.makeText(getApplicationContext(),"success",Toast.LENGTH_SHORT).show();
-
-                                            //チャンネルユーザー一覧を取得して送信対象とする
-                                            ncmbUtil.getChannelUserList(channel, new GetChannelUserListListener() {
-                                                @Override
-                                                public void success(final Channel channel) {
-                                                    Log.d(TAG, "getChannelUserList success size:" + channel.getChannelUserList().size());
-                                                    //選択中のチャンネルを設定
-                                                    activeChannel = channel;
-                                                }
-
-                                                @Override
-                                                public void error(NCMBException e) {
-                                                    Log.e(TAG, "getChannelUserList error " + e);
-                                                }
-                                            });
-
-                                        }
-
-                                        @Override
-                                        public void error(NCMBException e) {
-                                            Log.e(TAG, "updateChannelUserList error " + e);
-                                        }
-                                    });
-                                }
-                            },delay);
-                        }
-
-                        @Override
-                        public void error(NCMBException e) {
-                            Log.e(TAG, "getChannelUserList error " + e);
-                        }
-                    });
-                }
-
-                @Override
-                public void error(NCMBException e) {
-                    Log.e(TAG, "getChannelList error " + e);
-                }
-            });
+            Log.d(TAG, "onStunBinding");
+            //パブリックIP,ポートを保存
+            publicAddr = publicSocketAddr;
         }
 
         /** UDPServiceから届いいた メッセージを受信した場合
@@ -865,6 +883,10 @@ public class HomeActivity extends Activity
             }
 
             if (cmd.equals(UDPService.CMD_RECEIVE)) {
+                //チャンネルへのJOIN常態を確認
+                if(activeChannel == null){
+                    return;
+                }
                 if(data == null){
                     Log.d(TAG, "buf is null");
                     return;

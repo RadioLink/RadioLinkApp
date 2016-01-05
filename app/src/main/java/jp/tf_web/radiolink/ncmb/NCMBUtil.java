@@ -2,6 +2,7 @@ package jp.tf_web.radiolink.ncmb;
 
 import android.content.Context;
 import android.util.Log;
+import android.widget.Toast;
 
 import com.nifty.cloud.mb.core.DoneCallback;
 import com.nifty.cloud.mb.core.FetchFileCallback;
@@ -15,6 +16,7 @@ import com.nifty.cloud.mb.core.NCMBObject;
 import com.nifty.cloud.mb.core.NCMBQuery;
 import com.nifty.cloud.mb.core.NCMBUser;
 
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -24,9 +26,11 @@ import jp.tf_web.radiolink.ncmb.db.ChannelUser;
 import jp.tf_web.radiolink.ncmb.db.User;
 import jp.tf_web.radiolink.ncmb.listener.CreateChannelListener;
 import jp.tf_web.radiolink.ncmb.listener.DeleteChannelListener;
+import jp.tf_web.radiolink.ncmb.listener.ExitChannelUserlistener;
 import jp.tf_web.radiolink.ncmb.listener.GetChannelIconImageListener;
 import jp.tf_web.radiolink.ncmb.listener.GetChannelListListener;
 import jp.tf_web.radiolink.ncmb.listener.GetChannelUserListListener;
+import jp.tf_web.radiolink.ncmb.listener.JoinChannelUserlistener;
 import jp.tf_web.radiolink.ncmb.listener.LoginListener;
 import jp.tf_web.radiolink.ncmb.listener.LogoutListener;
 import jp.tf_web.radiolink.ncmb.listener.SetChannelIconImageListener;
@@ -307,8 +311,12 @@ public class NCMBUtil {
      * @param listener
      */
     public void updateChannelUserList(final Channel channel,final UpdateChannelUserListener listener){
-        //チャンネルユーザー一覧を保存
-        for(ChannelUser cu:channel.getChannelUserList()){
+        Log.d(TAG, "updateChannelUserList");
+
+        //更新対象を保持
+        final List<ChannelUser> updateList = channel.getChannelUserList();
+        Log.d(TAG, "updateList size:" + updateList.size());
+        for (ChannelUser cu : updateList) {
             try {
                 cu.toNCMBObject().save();
             } catch (NCMBException e) {
@@ -336,16 +344,16 @@ public class NCMBUtil {
 
             @Override
             public void done(List<NCMBObject> list, NCMBException e) {
-                if(e == null){
+                if (e == null) {
                     //成功
                     //チャンネルユーザーを更新
                     List<ChannelUser> channelUsers = new ArrayList<ChannelUser>();
-                    for(NCMBObject c:list){
+                    for (NCMBObject c : list) {
                         channelUsers.add(new ChannelUser(c));
                     }
                     channel.setChannelUserList(channelUsers);
                     listener.success(channel);
-                }else{
+                } else {
                     //失敗
                     listener.error(e);
                 }
@@ -436,7 +444,7 @@ public class NCMBUtil {
      * @param listener
      */
     public void getChannelList(final GetChannelListListener listener){
-        getChannelList(null,listener);
+        getChannelList(null, listener);
     }
 
     /** チャンネル一覧を取得する
@@ -463,7 +471,7 @@ public class NCMBUtil {
                     } else {
                         //成功
                         final List<Channel> channels = new ArrayList<Channel>();
-                        for(NCMBObject obj:list){
+                        for (NCMBObject obj : list) {
                             Channel c = new Channel(obj);
                             channels.add(c);
                         }
@@ -476,4 +484,106 @@ public class NCMBUtil {
             }
         });
     }
+
+    /** チャンネルに ユーザーを追加する
+     *
+     * @param channel
+     * @param publicSocketAddr
+     * @param localAddr
+     * @param listener
+     */
+    public void joinChannelUser(final Channel channel,final InetSocketAddress publicSocketAddr,final InetSocketAddress localAddr,final JoinChannelUserlistener listener){
+        Log.d(TAG, "joinChannelUser");
+
+        //ログイン中のユーザーを取得
+        final User currentUser = getCurrentUser();
+
+        //チャンネルに追加するチャンネルユーザー
+        final ChannelUser cu = new ChannelUser(channel, currentUser, publicSocketAddr, localAddr);
+
+        //チャンネルユーザー一覧を取得
+        getChannelUserList(channel, new GetChannelUserListListener() {
+            @Override
+            public void success(final Channel channel) {
+                //チャンネルにユーザーを追加
+                channel.addChannelUser(cu);
+
+                //チャンネルユーザー一覧を更新
+                updateChannelUserList(channel, new UpdateChannelUserListener() {
+                    @Override
+                    public void success(Channel channel) {
+                        Log.d(TAG, "updateChannelUserList success");
+                        //選択中のチャンネルを listener にコールバック
+                        listener.success(channel);
+                    }
+
+                    @Override
+                    public void error(NCMBException e) {
+                        Log.e(TAG, "updateChannelUserList error " + e);
+                        listener.error(e);
+                    }
+                });
+            }
+
+            @Override
+            public void error(NCMBException e) {
+                Log.e(TAG, "getChannelUserList error " + e);
+                listener.error(e);
+            }
+        });
+    }
+
+    /** チャンネルからユーザーを削除する
+     *
+     * @param publicSocketAddr
+     * @param localAddr
+     * @param listener
+     */
+    public void exitChannelUser(final Channel channel,final InetSocketAddress publicSocketAddr,final InetSocketAddress localAddr,final ExitChannelUserlistener listener) {
+        Log.d(TAG, "exitChannelUser");
+
+        //ログイン中のユーザーを取得
+        final User currentUser = getCurrentUser();
+
+        //チャンネルから削除するチャンネルユーザー
+        final ChannelUser cu = new ChannelUser(channel, currentUser, publicSocketAddr, localAddr);
+
+        //チャンネルユーザー一覧を取得
+        getChannelUserList(channel, new GetChannelUserListListener() {
+            @Override
+            public void success(final Channel channel) {
+                //チャンネルにユーザーを追加
+                ChannelUser removeChannelUser = channel.removeChannelUser(cu);
+                try {
+                    //サーバーからも削除
+                    removeChannelUser.toNCMBObject().deleteObject();
+                }catch (NCMBException e) {
+                    e.printStackTrace();
+                }
+
+                //チャンネルユーザー一覧を更新
+                updateChannelUserList(channel, new UpdateChannelUserListener() {
+                    @Override
+                    public void success(Channel channel) {
+                        Log.d(TAG, "updateChannelUserList success");
+                        //成功
+                        listener.success();
+                    }
+
+                    @Override
+                    public void error(NCMBException e) {
+                        Log.e(TAG, "updateChannelUserList error " + e);
+                        listener.error(e);
+                    }
+                });
+            }
+
+            @Override
+            public void error(NCMBException e) {
+                Log.e(TAG, "getChannelUserList error " + e);
+                listener.error(e);
+            }
+        });
+    }
+
 }

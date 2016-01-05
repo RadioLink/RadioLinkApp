@@ -82,14 +82,28 @@
         <Button
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="START"
+            android:text="Start"
             android:id="@+id/btnStart"
             android:layout_gravity="center_horizontal" />
 
         <Button
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="STOP"
+            android:text="Join"
+            android:id="@+id/btnChannelJoin"
+            android:layout_gravity="center_horizontal" />
+
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Exit"
+            android:id="@+id/btnChannelExit"
+            android:layout_gravity="center_horizontal" />
+
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Stop"
             android:id="@+id/btnStop"
             android:layout_gravity="center_horizontal" />
     </LinearLayout>

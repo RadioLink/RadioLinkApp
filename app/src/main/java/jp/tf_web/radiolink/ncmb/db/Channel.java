@@ -152,7 +152,6 @@ public class Channel implements NCMBObjectInterface {
             this.channelUserList = new ArrayList<ChannelUser>();
         }
         String objectId = channelUser.getUser().toNCMBObject().getObjectId();
-        //自分がチャンネルに登録済みの場合更新する
         boolean flg = true;
         for(ChannelUser cu:this.channelUserList){
             String cuObjectId = cu.getUser().toNCMBObject().getObjectId();
@@ -169,11 +168,34 @@ public class Channel implements NCMBObjectInterface {
         }
     }
 
-    public void deleteChannelUser(final ChannelUser channelUser){
+    /** 指定ユーザーチャンネルを削除
+     *
+     * @param channelUser
+     */
+    public ChannelUser removeChannelUser(final ChannelUser channelUser){
         if(this.channelUserList == null){
-            return;
+            return null;
         }
-        this.channelUserList.remove(channelUser);
+
+        //削除対象の
+        ChannelUser removeChannelUser = null;
+        String userObjectId = channelUser.getUser().toNCMBObject().getObjectId();
+        for(ChannelUser cu:this.channelUserList){
+            String tmpUserObjectId = cu.getUser().toNCMBObject().getObjectId();
+            Log.d(TAG, "userObjectId:"+userObjectId+" tmpUserObjectId:"+tmpUserObjectId);
+            if(tmpUserObjectId.equals(userObjectId)){
+                //削除対象のユーザチャンネル
+                removeChannelUser = cu;
+                break;
+            }
+        }
+
+        //削除対象が設定済みの場合
+        Log.d(TAG, "removeChannelUser:"+removeChannelUser);
+        if(removeChannelUser != null){
+            this.channelUserList.remove(removeChannelUser);
+        }
+        return removeChannelUser;
     }
 
     /** チャンネルユーザーを設定
