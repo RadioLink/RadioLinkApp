@@ -1,15 +1,17 @@
 RadioLink
 =========
-簡単に繋がるシンプルなVOIPアプリ
+簡単に繋がるシンプルなVoIPアプリ
 
 Pre-requisites
 --------------
 - Android Studio 1.3+ with [NDK](https://developer.android.com/ndk/) bundle.
-- Java-based STUN [JSTUN](https://github.com/tking/JSTUN)
+- Java-based STUN [JSTUN](https://github.com/tking/JSTUN)  
+- ニフティクラウド mobile backend [Nifty mBaaS](http://mb.cloud.nifty.com/)
 
 Screenshots
 -----------
-![screenshot](screenshot.png)
+![screenshot](screenshot.png)  
+※完成イメージ図
 
 Support
 -------
