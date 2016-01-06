@@ -14,6 +14,7 @@ public class Config {
     public static final int SAMPLE_RATE_IN_HZ = 16*1000;
 
     //録音バッファのサイズ
+    //OPUS_FRAME_SEC 0.0025, 0.005, 0.01, 0.02, 0.04, 0.06
     public static final int OPUS_FRAME_SIZE = (int)(SAMPLE_RATE_IN_HZ*0.04);
 
     // OPUS Output

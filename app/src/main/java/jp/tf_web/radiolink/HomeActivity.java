@@ -56,6 +56,7 @@ import jp.tf_web.radiolink.ncmb.listener.SetChannelIconImageListener;
 import jp.tf_web.radiolink.ncmb.listener.SigninListener;
 import jp.tf_web.radiolink.ncmb.listener.UpdateChannelUserListener;
 import jp.tf_web.radiolink.net.NetWorkUtil;
+import jp.tf_web.radiolink.net.protocol.PacketUtil;
 import jp.tf_web.radiolink.net.udp.service.UDPService;
 import jp.tf_web.radiolink.net.udp.service.UDPServiceListener;
 import jp.tf_web.radiolink.net.udp.service.UDPServiceReceiver;
@@ -173,6 +174,10 @@ public class HomeActivity extends Activity
         //チャンネル削除
         Button btnDeleteChannel = (Button)findViewById(R.id.btnDeleteChannel);
         btnDeleteChannel.setOnClickListener(this.btnDeleteChannelOnClickListener);
+
+        //パケット 処理テストボタン
+        Button btnPacketChannel = (Button)findViewById(R.id.btnPacket);
+        btnPacketChannel.setOnClickListener(this.btnPacketOnClickListener);
 
         //課金 処理の為の初期化
         inAppBillingUtil = new InAppBillingUtil(getApplicationContext(),inAppBillingUtilListener);
@@ -658,6 +663,15 @@ public class HomeActivity extends Activity
         }
     };
 
+
+    //パケットテストボタン
+    private View.OnClickListener btnPacketOnClickListener = new View.OnClickListener() {
+        @Override
+        public void onClick(View v) {
+            new PacketUtil().test();
+        }
+    };
+
     /** 録音結果を受け取るリスナー
      *
      */
@@ -711,6 +725,7 @@ public class HomeActivity extends Activity
             }
         });
     }
+
     /** MediaButtonクリックイベントを受け取るリスナー
      *
      */

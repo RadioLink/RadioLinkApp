@@ -14,7 +14,6 @@ public class ByteArrayUtil {
      * @return
      */
     public static byte[] shortArr2byteArr(final short[] pcm,final int length){
-        //byte[] → short[]
         byte[] dst = new byte[length*2];
         ByteBuffer buf = ByteBuffer.wrap(dst);
         buf.order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().put(pcm,0,length);
@@ -28,7 +27,6 @@ public class ByteArrayUtil {
      * @return
      */
     public static short[] byteArr2shortArr(final byte[] pcm,final int length){
-        //byte[] → short[]
         short[] dst = new short[length/2];
         ByteBuffer buf = ByteBuffer.wrap(pcm);
         buf.order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(dst);
@@ -43,7 +41,7 @@ public class ByteArrayUtil {
     public static String toHexString(final byte[] src){
         StringBuffer buf = new StringBuffer();
         for(byte b:src){
-            String s = Integer.toHexString(b & 0xff);
+            String s = String.format("%02x", b & 0xff);
             buf.append(s).append(",");
         }
         return buf.toString();
