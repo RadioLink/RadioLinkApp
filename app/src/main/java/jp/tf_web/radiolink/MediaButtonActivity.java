@@ -7,7 +7,8 @@ import android.util.Log;
 
 import jp.tf_web.radiolink.bluetooth.MediaButtonReceiver;
 
-/**
+/** ヘッドセットのボタンイベントを受け取る透明な画面
+ *
  * Created by furukawanobuyuki on 2016/01/07.
  */
 public class MediaButtonActivity extends Activity {
@@ -18,17 +19,11 @@ public class MediaButtonActivity extends Activity {
     {
         super.onCreate(savedInstanceState);
         Log.d(TAG, "onCreate()");
-    }
 
-    /** アプリを再起動した等
-     *
-     * @param intent
-     */
-    @Override
-    protected void onNewIntent(Intent intent){
-        super.onNewIntent(intent);
-        Log.d(TAG, "onNewIntent()");
         //ヘッドセットが有効だった場合はボタンを押されたとして通知
         MediaButtonReceiver.onClickMediaButton(getApplicationContext());
+
+        finish();
     }
+
 }
