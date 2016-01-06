@@ -30,6 +30,9 @@ import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import jp.tf_web.radiolink.audio.OpusManager;
 import jp.tf_web.radiolink.audio.RecordManager;
@@ -120,6 +123,9 @@ public class HomeActivity extends Activity
 
     //選択中のチャンネル
     private Channel activeChannel;
+    
+    //PacketデコードやOPUSデコードする為のスレッド
+    private ExecutorService executor = Executors.newSingleThreadExecutor();
 
     @Override
     public void onCreate(Bundle savedInstanceState)
@@ -946,20 +952,28 @@ public class HomeActivity extends Activity
                 //受信データのサイズ
                 Log.i(TAG, "receive data size:"+data.length);
 
-                //バイト配列からパケットを生成
-                Packet packet = PacketUtil.getInstance().createPacket(data);
-                //TODO: シーケンス番号順や送信元識別子順にソートする
-                //TODO: タイムスタンプが古い物は破棄
+                //onReceiveを成る可く早く終わらせたいので 別スレッドでエンコード等を実行
+                //遅いと遅延が発生する
+                executor.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        //バイト配列からパケットを生成
+                        Packet packet = PacketUtil.getInstance().createPacket(data);
+                        //TODO: シーケンス番号順や送信元識別子順にソートする
+                        //TODO: タイムスタンプが古い物は破棄
 
-                //OPUSデコードする
-                List<Payload> payload = packet.getPayload();
-                for(Payload p:payload){
-                    //ペイロードから音を取り出す
-                    byte[] pcm = opusManager.decode(p.getData(),Config.OPUS_FRAME_SIZE);
+                        //OPUSデコードする
+                        List<Payload> payload = packet.getPayload();
+                        for(Payload p:payload){
+                            //ペイロードから音を取り出す
+                            byte[] pcm = opusManager.decode(p.getData(),Config.OPUS_FRAME_SIZE);
 
-                    //再生
-                    trackManager.write(pcm, 0, pcm.length);
-                }
+                            //再生
+                            trackManager.write(pcm, 0, pcm.length);
+                        }
+                    }
+                });
+
             }
         }
     };
