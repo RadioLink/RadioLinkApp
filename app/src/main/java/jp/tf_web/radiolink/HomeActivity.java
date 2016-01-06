@@ -15,11 +15,14 @@ import android.os.Handler;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.os.Bundle;
 import android.widget.Toast;
 
+import com.google.zxing.WriterException;
+import com.google.zxing.integration.android.IntentResult;
 import com.nifty.cloud.mb.core.NCMBException;
 
 import java.io.IOException;
@@ -62,6 +65,8 @@ import jp.tf_web.radiolink.net.protocol.packet.Payload;
 import jp.tf_web.radiolink.net.udp.service.UDPService;
 import jp.tf_web.radiolink.net.udp.service.UDPServiceListener;
 import jp.tf_web.radiolink.net.udp.service.UDPServiceReceiver;
+import jp.tf_web.radiolink.qrcode.QRCodeUtil;
+import jp.tf_web.radiolink.qrcode.ScanQRCodeResultListener;
 import jp.tf_web.radiolink.sensor.LightSensorManager;
 import jp.tf_web.radiolink.sensor.LightSensorManagerListener;
 import jp.tf_web.radiolink.util.BitmapUtil;
@@ -181,6 +186,11 @@ public class HomeActivity extends Activity
         Button btnPacketChannel = (Button)findViewById(R.id.btnPacket);
         btnPacketChannel.setOnClickListener(this.btnPacketOnClickListener);
 
+        //QRコードスキャン ボタン
+        Button btnQRCodeScan = (Button)findViewById(R.id.btnQRCodeScan);
+        btnQRCodeScan.setOnClickListener(this.btnQRCodeScanOnClickListener);
+
+
         //課金 処理の為の初期化
         inAppBillingUtil = new InAppBillingUtil(getApplicationContext(),inAppBillingUtilListener);
         inAppBillingUtil.setup();
@@ -189,25 +199,27 @@ public class HomeActivity extends Activity
         initialize();
     }
 
-    /** アプリを再起動した等
-     *
-     * @param intent
-     */
-    @Override
-    protected void onNewIntent(Intent intent){
-        super.onNewIntent(intent);
-        Log.d(TAG, "onNewIntent()");
-        if(bluetoothAudioDeviceManager.isBluetoothConnected()) {
-            //ヘッドセットが有効だった場合はボタンを押されたとして通知
-            MediaButtonReceiver.onClickMediaButton(getApplicationContext());
-        }
-    }
-
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         Log.d(TAG, "onActivityResult()");
+        boolean isResult = false;
+
         // 購入結果をActivityが受け取るための設定
-        if (!inAppBillingUtil.onActivityResult(requestCode, resultCode, data)) {
-            //課金と無関係の場合、メインの onActivityResult を実行
+        if(isResult == false) {
+            isResult = inAppBillingUtil.onActivityResult(requestCode, resultCode, data);
+        }
+
+        //QRコードスキャン結果を受け取る
+        if(isResult == false) {
+            isResult = QRCodeUtil.onActivityResult(requestCode, resultCode, data, new ScanQRCodeResultListener() {
+                @Override
+                public void success(IntentResult scanResult) {
+                    Log.d(TAG, "QRCode "+scanResult.getContents());
+                }
+            });
+        }
+
+        if(isResult == false) {
+            //通常の onActivityResult を実行
             super.onActivityResult(requestCode, resultCode, data);
         }
     }
@@ -665,12 +677,32 @@ public class HomeActivity extends Activity
         }
     };
 
-
     //パケットテストボタン
     private View.OnClickListener btnPacketOnClickListener = new View.OnClickListener() {
         @Override
         public void onClick(View v) {
             PacketUtil.getInstance().test();
+        }
+    };
+
+    //パケットテストボタン
+    private View.OnClickListener btnQRCodeScanOnClickListener = new View.OnClickListener() {
+        @Override
+        public void onClick(View v) {
+
+
+            try {
+                //QRコード生成
+                Bitmap qrImg = QRCodeUtil.createQRCodeByZxing("testChannel", 300);
+                //QRコードを画面に表示
+                ImageView imgQRcode = (ImageView) findViewById(R.id.imgQRcode);
+                imgQRcode.setImageBitmap(qrImg);
+            } catch (WriterException e) {
+                e.printStackTrace();
+            }
+
+            //QRコードを読み込む
+            QRCodeUtil.scanQRCode(HomeActivity.this);
         }
     };
 
@@ -916,14 +948,15 @@ public class HomeActivity extends Activity
 
                 //バイト配列からパケットを生成
                 Packet packet = PacketUtil.getInstance().createPacket(data);
+                //TODO: シーケンス番号順や送信元識別子順にソートする
+                //TODO: タイムスタンプが古い物は破棄
 
                 //OPUSデコードする
                 List<Payload> payload = packet.getPayload();
                 for(Payload p:payload){
-                    //TODO: シーケンス番号順や送信元識別子順にソートする
-                    //TODO: その後 再生
                     //ペイロードから音を取り出す
                     byte[] pcm = opusManager.decode(p.getData(),Config.OPUS_FRAME_SIZE);
+
                     //再生
                     trackManager.write(pcm, 0, pcm.length);
                 }

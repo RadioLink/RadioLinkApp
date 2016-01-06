@@ -121,6 +121,20 @@
             android:id="@+id/btnInAppBilling"
             android:layout_gravity="center_horizontal" />
 
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Packet"
+            android:id="@+id/btnPacket"
+            android:layout_gravity="center_horizontal" />
+
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="QRcode"
+            android:id="@+id/btnQRCodeScan"
+            android:layout_gravity="center_horizontal" />
+
     </LinearLayout>
 
     <LinearLayout
@@ -129,14 +143,10 @@
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal">
 
-        <Button
+        <ImageView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Packet"
-            android:id="@+id/btnPacket"
-            android:layout_gravity="center_horizontal" />
+            android:id="@+id/imgQRcode" />
 
     </LinearLayout>
-
-
 </LinearLayout>

@@ -4,7 +4,6 @@ import android.content.Context;
 import android.media.AudioFormat;
 import android.media.AudioTrack;
 import android.os.Build;
-import android.os.Handler;
 import android.util.Log;
 
 /** 再生 処理をする実装するクラス
@@ -38,7 +37,6 @@ public class TrackManager {
      * @param audioStream オーディオストリーム種類
      */
     void initialize(final int audioStream) {
-
         if(audioTrack != null){
             audioTrack.stop();
             audioTrack = null;
@@ -87,7 +85,7 @@ public class TrackManager {
      *
      * @param pcm PCMデータ
      * @param offset バッファオフセット
-     * @param size 書き込みサイズ
+     * @param size バッファサイズ
      */
     public void write(final byte[] pcm,final int offset,final int size){
         //再生バッファに送る
@@ -100,4 +98,5 @@ public class TrackManager {
             audioTrack.write(pcm, offset, size, AudioTrack.WRITE_NON_BLOCKING);
         }
     }
+
 }
