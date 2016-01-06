@@ -57,6 +57,8 @@ import jp.tf_web.radiolink.ncmb.listener.SigninListener;
 import jp.tf_web.radiolink.ncmb.listener.UpdateChannelUserListener;
 import jp.tf_web.radiolink.net.NetWorkUtil;
 import jp.tf_web.radiolink.net.protocol.PacketUtil;
+import jp.tf_web.radiolink.net.protocol.packet.Packet;
+import jp.tf_web.radiolink.net.protocol.packet.Payload;
 import jp.tf_web.radiolink.net.udp.service.UDPService;
 import jp.tf_web.radiolink.net.udp.service.UDPServiceListener;
 import jp.tf_web.radiolink.net.udp.service.UDPServiceReceiver;
@@ -668,7 +670,7 @@ public class HomeActivity extends Activity
     private View.OnClickListener btnPacketOnClickListener = new View.OnClickListener() {
         @Override
         public void onClick(View v) {
-            new PacketUtil().test();
+            PacketUtil.getInstance().test();
         }
     };
 
@@ -698,7 +700,7 @@ public class HomeActivity extends Activity
                 }
             });
             //TODO: volume閾値での簡易VAD
-            if(volume < 600){
+            if(volume < Config.VOLUME_THRESHOLD){
                 //仮でVAD識別の為に背景色を変更
                 setBackgroundColor(Color.RED);
                 return;
@@ -711,8 +713,11 @@ public class HomeActivity extends Activity
             //OPUSエンコード
             byte[] opus = opusManager.encode(data);
             if(opus.length > 1) {
-                //UDPでチャンネルの全てのユーザーに送信
-                udpServiceSendByteArray(opus);
+                //パケットにまとめてから UDPでユーザーに送信する
+                Packet packet = PacketUtil.getInstance().createPacket();
+                packet.addPayload(opus);
+
+                udpServiceSendByteArray(packet.toByteArray());
             }
         }
     };
@@ -909,11 +914,19 @@ public class HomeActivity extends Activity
                 //受信データのサイズ
                 Log.i(TAG, "receive data size:"+data.length);
 
-                //OPUSデコードする
-                byte[] pcm = opusManager.decode(data,Config.OPUS_FRAME_SIZE);
+                //バイト配列からパケットを生成
+                Packet packet = PacketUtil.getInstance().createPacket(data);
 
-                //再生
-                trackManager.write(pcm, 0, pcm.length);
+                //OPUSデコードする
+                List<Payload> payload = packet.getPayload();
+                for(Payload p:payload){
+                    //TODO: シーケンス番号順や送信元識別子順にソートする
+                    //TODO: その後 再生
+                    //ペイロードから音を取り出す
+                    byte[] pcm = opusManager.decode(p.getData(),Config.OPUS_FRAME_SIZE);
+                    //再生
+                    trackManager.write(pcm, 0, pcm.length);
+                }
             }
         }
     };

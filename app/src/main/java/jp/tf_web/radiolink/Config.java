@@ -28,6 +28,9 @@ public class Config {
     //   8 kb/s bitrate.   enc_size: 42  携帯電話
     public static final int OPUS_OUTPUT_BITRATE_BPS =32*1024;
 
+    //ボリュームの閾値
+    public static final int VOLUME_THRESHOLD = 600;
+
     //照度センサーの閾値
     public static final int LIGHT_SENSOR_THRESHOLD = 20;
 

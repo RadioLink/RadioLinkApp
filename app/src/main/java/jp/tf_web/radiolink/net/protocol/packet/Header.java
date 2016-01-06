@@ -21,7 +21,7 @@ public class Header implements PacketInterface{
     private static String TAG = "Header";
 
     //バイト配列変換用のバイトバッファー
-    private ByteBuffer byteBuf = ByteBuffer.allocate(100);
+    private ByteBuffer byteBuf = ByteBuffer.allocate(1024);
 
     /** 送信元識別子(Synchronization source)
      *
@@ -117,7 +117,6 @@ public class Header implements PacketInterface{
             byteBuf.flip();
             this.src = new byte[byteBuf.limit()];
             byteBuf.get(this.src);
-            Log.d(TAG, "src size:" + this.src.length);
         }
         return this.src;
     }

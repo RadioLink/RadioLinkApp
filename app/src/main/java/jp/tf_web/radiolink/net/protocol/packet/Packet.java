@@ -56,6 +56,7 @@ public class Packet implements PacketInterface{
      */
     public Packet(byte[] src) throws ParseException {
         this.src = src.clone();
+        parse();
     }
 
     /** 構文解析する
@@ -103,7 +104,6 @@ public class Packet implements PacketInterface{
             byteBuf.flip();
             this.src = new byte[byteBuf.limit()];
             byteBuf.get(this.src);
-            Log.d(TAG, "src size:" + this.src.length);
         }
         return this.src;
     }
@@ -122,5 +122,15 @@ public class Packet implements PacketInterface{
      */
     public List<Payload> getPayload(){
         return this.payload;
+    }
+
+    /** パケットのペイロードを追加
+     *
+     * @param data
+     * @return
+     */
+    public Packet addPayload(final byte[] data){
+        this.payload.add( new Payload((short) data.length, data) );
+        return this;
     }
 }

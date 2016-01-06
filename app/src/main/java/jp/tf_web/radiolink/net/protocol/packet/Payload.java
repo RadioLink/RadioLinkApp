@@ -14,11 +14,8 @@ import java.util.Arrays;
 public class Payload implements PacketInterface {
     private static String TAG = "Payload";
 
-    //ペイロードの最大サイズ
-    public static int PAYLOAD_MAX_BUFFER_SIZE = 256;
-
     //バイト配列変換用のバイトバッファー
-    private ByteBuffer byteBuf = ByteBuffer.allocate(PAYLOAD_MAX_BUFFER_SIZE);
+    private ByteBuffer byteBuf = ByteBuffer.allocate(1024);
 
     //データをバイト配列にした物
     private byte[] src;
@@ -41,6 +38,8 @@ public class Payload implements PacketInterface {
     public Payload(short size, byte[] data){
         this.size = size;
         this.data = data;
+
+        Log.d(TAG,"Payload() size:"+size);
     }
 
     /** コンストラクタ
@@ -73,6 +72,8 @@ public class Payload implements PacketInterface {
         byte[] s = new byte[2];
         byteBuf.get(s,0,s.length);
         size = (short)((s[0]<< 8)+s[1]);
+        if(size < 0) size = (short)(256+size);
+        Log.d(TAG, "parse() size:" + size+" "+Short.SIZE);
 
         data = new byte[size];
         byteBuf.get(data, 0, data.length);
