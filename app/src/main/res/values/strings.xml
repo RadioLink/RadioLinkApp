@@ -1,4 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">RadioLink</string>
+    <string name="action_share">Share</string>
+
+    <string name="scheme">radiolink</string>
+    <string name="scheme_host_share">share</string>
+    <string name="scheme_title">Share</string>
 </resources>

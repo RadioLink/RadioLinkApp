@@ -13,10 +13,13 @@ import android.media.AudioManager;
 import android.os.Build;
 import android.os.Handler;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ShareActionProvider;
 import android.widget.TextView;
 import android.os.Bundle;
 import android.widget.Toast;
@@ -30,7 +33,6 @@ import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -73,6 +75,7 @@ import jp.tf_web.radiolink.qrcode.ScanQRCodeResultListener;
 import jp.tf_web.radiolink.sensor.LightSensorManager;
 import jp.tf_web.radiolink.sensor.LightSensorManagerListener;
 import jp.tf_web.radiolink.util.BitmapUtil;
+import jp.tf_web.radiolink.util.ShareActionUtil;
 
 
 public class HomeActivity extends Activity
@@ -249,6 +252,38 @@ public class HomeActivity extends Activity
         }
     }
 
+    /** メニューを画面に追加
+     *
+     * @param menu
+     * @return
+     */
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu; this adds items to the action bar if it is present.
+        getMenuInflater().inflate(R.menu.menu_main, menu);
+
+        // ShareActionProvider の設定
+        MenuItem actionItem = menu.findItem(R.id.actionShareAlways);
+        ShareActionProvider actionProvider = (ShareActionProvider) actionItem.getActionProvider();
+
+        ShareActionUtil.getInstance().setActionProvider(actionProvider);
+
+        // ShareActionProviderにインテントの設定
+        ShareActionUtil.getInstance().setShareIntent(getApplicationContext(),"hogehoge");
+
+        return true;
+    }
+
+    /** メニュー選択時の処理
+     *
+     * @param item
+     * @return
+     */
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        return super.onOptionsItemSelected(item);
+    }
+
     //各クラスの初期化
     private void initialize(){
 
@@ -375,6 +410,9 @@ public class HomeActivity extends Activity
 
                     //仮で一番新しいチャンネルを選択
                     final Channel c = channels.get(0);
+
+                    // ShareActionProviderにインテントの設定
+                    ShareActionUtil.getInstance().setShareIntent(getApplicationContext(),c.getChannelCode());
 
                     //チャンネルに JOIN する
                     ncmbUtil.joinChannelUser(c, publicAddr, localAddr, new JoinChannelUserlistener() {

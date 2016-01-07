@@ -52,4 +52,7 @@ public class Config {
 
     //ニフティクラウド mobile backend クライアントキー
     public static final String NCMB_CLIENT_KEY = PrivateConfig.NCMB_CLIENT_KEY;
+
+    //スキーム起動のシェアの為のリダイレクトAPI
+    public static final String SCHEME_REDIRECT_API = "https://mb.api.cloud.nifty.com/2013-09-01/applications/mtuVqeiYFQZrh9iT/publicFiles/redirect.html?u=";
 }
