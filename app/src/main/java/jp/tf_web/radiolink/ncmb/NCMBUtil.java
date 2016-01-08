@@ -271,7 +271,7 @@ public class NCMBUtil {
 
         //他人が作ったチャンネルは削除できない
         NCMBQuery<NCMBObject> subQuery = new NCMBQuery<>(User.OBJ_NAME);
-        subQuery.whereEqualTo(User.KEY_USER_NAME,currentUser.getUserName());
+        subQuery.whereEqualTo(User.KEY_USER_NAME, currentUser.getUserName());
         query.whereMatchesQuery(Channel.KEY_USER, subQuery);
 
         query.whereEqualTo(Channel.KEY_CHANNEL_CODE, channelCode);
@@ -497,6 +497,11 @@ public class NCMBUtil {
 
         //ログイン中のユーザーを取得
         final User currentUser = getCurrentUser();
+        if(currentUser == null){
+            Log.d(TAG, "currentUser is null");
+            listener.error(new NCMBException(NCMBException.GENERIC_ERROR, "currentUser is null"));
+            return;
+        }
 
         //チャンネルに追加するチャンネルユーザー
         final ChannelUser cu = new ChannelUser(channel, currentUser, publicSocketAddr, localAddr);
@@ -544,6 +549,11 @@ public class NCMBUtil {
 
         //ログイン中のユーザーを取得
         final User currentUser = getCurrentUser();
+        if(currentUser == null){
+            Log.d(TAG, "currentUser is null");
+            listener.error(new NCMBException(NCMBException.GENERIC_ERROR, "currentUser is null"));
+            return;
+        }
 
         //チャンネルから削除するチャンネルユーザー
         final ChannelUser cu = new ChannelUser(channel, currentUser, publicSocketAddr, localAddr);

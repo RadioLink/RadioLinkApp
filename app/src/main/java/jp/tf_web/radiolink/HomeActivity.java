@@ -10,6 +10,7 @@ import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.hardware.SensorEvent;
 import android.media.AudioManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Handler;
 import android.util.Log;
@@ -75,12 +76,15 @@ import jp.tf_web.radiolink.qrcode.ScanQRCodeResultListener;
 import jp.tf_web.radiolink.sensor.LightSensorManager;
 import jp.tf_web.radiolink.sensor.LightSensorManagerListener;
 import jp.tf_web.radiolink.util.BitmapUtil;
-import jp.tf_web.radiolink.util.ShareActionUtil;
+import jp.tf_web.radiolink.scheme.ShareActionUtil;
 
 
 public class HomeActivity extends Activity
 {
     private static String TAG = "HomeActivity";
+
+    //起動時パラメータのキー
+    public static final String KEY_SHARE_ACTION_CHANNEL_CODE = "channel_code";
 
     //ハンドラー
     private Handler handler;
@@ -130,13 +134,16 @@ public class HomeActivity extends Activity
     //PacketデコードやOPUSデコードする為のスレッド
     private ExecutorService executor = Executors.newSingleThreadExecutor();
 
+    //選択中のチャンネル
+    private String selectChannelCode = null;
+
     @Override
     public void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main_activity);
 
-        Log.d(TAG, "onCreate()");
+        Log.d(TAG, "onCreate() "+this);
 
         Log.d(TAG, " DEVICE:"+Build.DEVICE+" MODEL:"+Build.MODEL);
 
@@ -199,13 +206,26 @@ public class HomeActivity extends Activity
         Button btnQRCodeScan = (Button)findViewById(R.id.btnQRCodeScan);
         btnQRCodeScan.setOnClickListener(this.btnQRCodeScanOnClickListener);
 
+        //起動時パラメータを取得
+        String action = getIntent().getAction();
+        if (Intent.ACTION_VIEW.equals(action)) {
+            Uri uri = getIntent().getData();
+            if (uri != null) {
+                Log.d(TAG, "uri " + uri.toString());
+                final String channelCode = uri.getQueryParameter(ShareActionUtil.KEY_VALUE_SHARE_CHANNEL_CODE);
+                Log.d(TAG, "channelCode " + channelCode);
+                Toast.makeText(getApplicationContext(),"channelCode:"+channelCode,Toast.LENGTH_SHORT).show();
 
-        //課金 処理の為の初期化
-        inAppBillingUtil = new InAppBillingUtil(getApplicationContext(),inAppBillingUtilListener);
-        inAppBillingUtil.setup();
+                selectChannelCode = channelCode;
+            }
+        }
+    }
 
-        //各クラスの初期化
-        initialize();
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        Log.d(TAG, "onNewIntent()");
+        setIntent(intent);
     }
 
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -234,6 +254,30 @@ public class HomeActivity extends Activity
     }
 
     @Override
+    public void onStart() {
+        super.onStart();
+        Log.d(TAG, "onStart()");
+    }
+
+    @Override
+    protected void onResume(){
+        super.onResume();
+        Log.d(TAG, "onResume()");
+    }
+
+    @Override
+    protected void onPause(){
+        super.onPause();
+        Log.d(TAG, "onPause()");
+    }
+
+    @Override
+    protected void onStop(){
+        super.onStop();
+        Log.d(TAG, "onStop()");
+    }
+
+    @Override
     protected void onDestroy() {
         super.onDestroy();
         Log.d(TAG, "onDestroy()");
@@ -241,14 +285,17 @@ public class HomeActivity extends Activity
         stop();
 
         //課金処理の破棄
-        inAppBillingUtil.dispose();
-
-        if(opusManager == null) return;
-        try{
-            opusManager.close();
+        if(inAppBillingUtil != null) {
+            inAppBillingUtil.dispose();
         }
-        catch ( IOException e ){
-            Log.e( TAG,"Could not close or flush stream", e );
+
+        if(opusManager != null){
+            try{
+                opusManager.close();
+            }
+            catch ( IOException e ){
+                Log.e( TAG,"Could not close or flush stream", e );
+            }
         }
     }
 
@@ -269,7 +316,7 @@ public class HomeActivity extends Activity
         ShareActionUtil.getInstance().setActionProvider(actionProvider);
 
         // ShareActionProviderにインテントの設定
-        ShareActionUtil.getInstance().setShareIntent(getApplicationContext(),"hogehoge");
+        ShareActionUtil.getInstance().setShareIntent(getApplicationContext(), "hogehoge");
 
         return true;
     }
@@ -286,35 +333,58 @@ public class HomeActivity extends Activity
 
     //各クラスの初期化
     private void initialize(){
+        //課金 処理の為の初期化
+        if(inAppBillingUtil == null) {
+            inAppBillingUtil = new InAppBillingUtil(getApplicationContext(), inAppBillingUtilListener);
+            inAppBillingUtil.setup();
+        }
 
         //API処理をするユーテリティ
-        ncmbUtil = new NCMBUtil(getApplicationContext(),Config.NCMB_APP_KEY,Config.NCMB_CLIENT_KEY);
+        if(ncmbUtil == null) {
+            ncmbUtil = new NCMBUtil(getApplicationContext(), Config.NCMB_APP_KEY, Config.NCMB_CLIENT_KEY);
+        }
 
         //OPUSデコード,エンコード
-        opusManager = new OpusManager(Config.SAMPLE_RATE_IN_HZ,
-                1,
-                Config.OPUS_FRAME_SIZE,
-                Config.OPUS_OUTPUT_BITRATE_BPS);
+        if(opusManager == null) {
+            opusManager = new OpusManager(Config.SAMPLE_RATE_IN_HZ,
+                    1,
+                    Config.OPUS_FRAME_SIZE,
+                    Config.OPUS_OUTPUT_BITRATE_BPS);
+        }
 
         //UDPServiceからの受信を受け取るレシーバー
-        udpServiceReceiver = new UDPServiceReceiver(udpServiceListener);
-        udpServiceReceiver.registerReceiver(getApplicationContext());
+        if(udpServiceReceiver == null) {
+            udpServiceReceiver = new UDPServiceReceiver(udpServiceListener);
+            udpServiceReceiver.registerReceiver(getApplicationContext());
+        }
 
         //Bluetoothヘッドセットを利用する
-        bluetoothAudioDeviceManager = new BluetoothAudioDeviceManager(getApplicationContext());
+        if(bluetoothAudioDeviceManager == null) {
+            bluetoothAudioDeviceManager = new BluetoothAudioDeviceManager(getApplicationContext());
+        }
 
         //再生処理の初期化
-        trackManager = new TrackManager(getApplicationContext(), Config.SAMPLE_RATE_IN_HZ);
+        if(trackManager == null) {
+            trackManager = new TrackManager(getApplicationContext(), Config.SAMPLE_RATE_IN_HZ);
+        }
 
         //録音関連処理の初期化
-        recordManager = new RecordManager(getApplicationContext(),Config.SAMPLE_RATE_IN_HZ,Config.OPUS_FRAME_SIZE*2,recordManagerListener);
+        if(recordManager == null) {
+            recordManager = new RecordManager(getApplicationContext(), Config.SAMPLE_RATE_IN_HZ, Config.OPUS_FRAME_SIZE * 2, recordManagerListener);
+        }
 
         //照度センサーを初期化
-        lightSensorManager = new LightSensorManager(getApplicationContext(),lightSensorManagerListener);
+        if(lightSensorManager == null) {
+            lightSensorManager = new LightSensorManager(getApplicationContext(), lightSensorManagerListener);
+        }
     }
 
     //各クラスの開始
     private void start(){
+
+        //各クラスの初期化
+        initialize();
+
         //ローカルIPアドレスを取得
         NetWorkUtil.getLocalIpv4Address(new NetWorkUtil.GetLocalIpv4AddressListener() {
             @Override
@@ -401,52 +471,63 @@ public class HomeActivity extends Activity
     private View.OnClickListener btnChannelJoinOnClickListener = new View.OnClickListener() {
         @Override
         public void onClick(View v) {
-            //チャンネル一覧から 一番新しいチャンネルを選択する
-            ncmbUtil.getChannelList(new GetChannelListListener() {
-                @Override
-                public void success(List<Channel> channels) {
-                    Log.d(TAG, "getChannelList success size:" + channels.size());
-                    if (channels.size() == 0) return;
-
-                    //仮で一番新しいチャンネルを選択
-                    final Channel c = channels.get(0);
-
-                    // ShareActionProviderにインテントの設定
-                    ShareActionUtil.getInstance().setShareIntent(getApplicationContext(),c.getChannelCode());
-
-                    //チャンネルに JOIN する
-                    ncmbUtil.joinChannelUser(c, publicAddr, localAddr, new JoinChannelUserlistener() {
-                        /** 成功
-                         *
-                         * @param channel
-                         */
-                        @Override
-                        public void success(final Channel channel) {
-                            //JOINに成功
-                            activeChannel = channel;
-                            Toast.makeText(getApplicationContext(), "JOIN!", Toast.LENGTH_SHORT).show();
-                            //TODO: GCM 通知
-                        }
-
-                        /** 失敗
-                         *
-                         * @param e
-                         */
-                        @Override
-                        public void error(NCMBException e) {
-                            Log.e(TAG, "error:" + e);
-                        }
-                    });
-                }
-
-                @Override
-                public void error(NCMBException e) {
-                    Log.e(TAG, "getChannelList error " + e);
-                }
-            });
-
+            //チャンネルコードを指定して検索後に JOIN する
+            join(selectChannelCode);
         }
     };
+
+    /** チャンネルコードを指定してチャンネル取得後に JOIN する
+     *
+     * @param channelCode チャンネルコード
+     */
+    private void join(final String channelCode){
+        ncmbUtil.getChannelList(channelCode,new GetChannelListListener() {
+            @Override
+            public void success(List<Channel> channels) {
+                Log.d(TAG, "getChannelList success size:" + channels.size());
+                if (channels.size() == 0){
+                    //TOTO: チャンネルが見つからなかった
+                    Toast.makeText(getApplicationContext(),"channelCode "+channelCode+" not found.",Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                //仮で一番新しいチャンネルを選択
+                final Channel c = channels.get(0);
+
+                // ShareActionProviderにインテントの設定
+                ShareActionUtil.getInstance().setShareIntent(getApplicationContext(),c.getChannelCode());
+
+                //チャンネルに JOIN する
+                ncmbUtil.joinChannelUser(c, publicAddr, localAddr, new JoinChannelUserlistener() {
+                    /** 成功
+                     *
+                     * @param channel
+                     */
+                    @Override
+                    public void success(final Channel channel) {
+                        //JOINに成功
+                        activeChannel = channel;
+                        Toast.makeText(getApplicationContext(), "JOIN!", Toast.LENGTH_SHORT).show();
+                        //TODO: GCM 通知
+                    }
+
+                    /** 失敗
+                     *
+                     * @param e
+                     */
+                    @Override
+                    public void error(NCMBException e) {
+                        Log.e(TAG, "error:" + e);
+                    }
+                });
+            }
+
+            @Override
+            public void error(NCMBException e) {
+                Log.e(TAG, "getChannelList error " + e);
+            }
+        });
+    }
 
     //Channel Exit ボタンクリック時
     private View.OnClickListener btnChannelExitOnClickListener = new View.OnClickListener() {

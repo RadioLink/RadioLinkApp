@@ -1,18 +1,15 @@
-package jp.tf_web.radiolink.util;
+package jp.tf_web.radiolink.scheme;
 
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.ResolveInfo;
 import android.net.Uri;
-import android.os.Build;
+import android.os.Bundle;
 import android.util.Log;
-import android.view.Menu;
 import android.widget.ShareActionProvider;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import jp.tf_web.radiolink.Config;
@@ -33,8 +30,15 @@ public class ShareActionUtil {
     //シェアアクションプロバイダー
     private ShareActionProvider actionProvider;
 
-    //スキーム起動時のパラメータ名
-    private static String KEY_URI_PARAME_CHANNEL_CODE = "channel_code";
+    //アクション名
+    public static final String ACTION_NAME = "ACTION_SHARE";
+
+    //各コマンド
+    public static final String KEY_NAME_CMD = "cmd";
+
+    public static final String CMD_SHARE = "share";
+
+    public static final String KEY_VALUE_SHARE_CHANNEL_CODE = "channel_code";
 
     private ShareActionUtil() {
 
@@ -75,7 +79,7 @@ public class ShareActionUtil {
         //共有するURI作成
         Map<String,String> params = new HashMap<String, String>(){
             {
-                put(KEY_URI_PARAME_CHANNEL_CODE,channel_code);
+                put(KEY_VALUE_SHARE_CHANNEL_CODE,channel_code);
             }
         };
         Uri uri = createShareSchemeUri(context, params);
@@ -103,16 +107,25 @@ public class ShareActionUtil {
         shareIntent.putExtra(Intent.EXTRA_TEXT, url);
         shareIntent.putExtra(Intent.EXTRA_HTML_TEXT, html);
 
-/* FACEBOOKはブラウザ開いて投稿すれば URLがシェアできそう
-
-        {
-            String sharerUrl = "https://www.facebook.com/sharer/sharer.php?u=http://www.google.com";
-            shareIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(sharerUrl));
-            shareIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            context.startActivity(shareIntent);
-        }
-*/
         // ShareActionProviderにインテントの設定
         this.actionProvider.setShareIntent(shareIntent);
+    }
+
+    /** Activityに通知する
+     *
+     * @param context
+     * @param channelCode
+     */
+    public static void startActivity(final Context context,final Class<?> activity,String channelCode){
+        Intent intent = new Intent(context, activity);
+        intent.setAction(ACTION_NAME);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+
+        Bundle bandle = new Bundle();
+        bandle.putString(KEY_NAME_CMD, CMD_SHARE);
+        bandle.putString(KEY_VALUE_SHARE_CHANNEL_CODE, channelCode);
+        intent.putExtras(bandle);
+
+        context.startActivity(intent);
     }
 }
