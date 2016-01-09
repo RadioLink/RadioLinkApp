@@ -322,6 +322,9 @@ public class NCMBUtil {
             } catch (NCMBException e) {
                 e.printStackTrace();
             }
+            catch (Exception e) {
+                e.printStackTrace();
+            }
         }
         listener.success(channel);
     }
@@ -495,6 +498,11 @@ public class NCMBUtil {
     public void joinChannelUser(final Channel channel,final InetSocketAddress publicSocketAddr,final InetSocketAddress localAddr,final JoinChannelUserlistener listener){
         Log.d(TAG, "joinChannelUser");
 
+        if(channel == null){
+            listener.error(new NCMBException(NCMBException.GENERIC_ERROR, "channel is null"));
+            return;
+        }
+
         //ログイン中のユーザーを取得
         final User currentUser = getCurrentUser();
         if(currentUser == null){
@@ -547,6 +555,11 @@ public class NCMBUtil {
     public void exitChannelUser(final Channel channel,final InetSocketAddress publicSocketAddr,final InetSocketAddress localAddr,final ExitChannelUserlistener listener) {
         Log.d(TAG, "exitChannelUser");
 
+        if(channel == null){
+            listener.error(new NCMBException(NCMBException.GENERIC_ERROR, "channel is null"));
+            return;
+        }
+
         //ログイン中のユーザーを取得
         final User currentUser = getCurrentUser();
         if(currentUser == null){
@@ -567,7 +580,7 @@ public class NCMBUtil {
                 try {
                     //サーバーからも削除
                     removeChannelUser.toNCMBObject().deleteObject();
-                }catch (NCMBException e) {
+                } catch (NCMBException e) {
                     e.printStackTrace();
                 }
 

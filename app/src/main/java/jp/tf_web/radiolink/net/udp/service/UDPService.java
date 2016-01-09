@@ -50,15 +50,6 @@ public class UDPService extends Service {
     //各処理をする Executor
     private ExecutorService executor;
 
-    //サーバホスト
-    private String serverHost;
-
-    //受信ポート
-    private int bindPort;
-
-    //送信ポート
-    private int sendPort;
-
     //UDPからの受信
     private UDPReceiver udpReceiver;
 

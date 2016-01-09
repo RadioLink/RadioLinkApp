@@ -38,8 +38,7 @@ public class Payload implements PacketInterface {
     public Payload(short size, byte[] data){
         this.size = size;
         this.data = data;
-
-        Log.d(TAG,"Payload() size:"+size);
+        //Log.d(TAG,"Payload() size:"+size);
     }
 
     /** コンストラクタ
@@ -73,7 +72,7 @@ public class Payload implements PacketInterface {
         byteBuf.get(s,0,s.length);
         size = (short)((s[0]<< 8)+s[1]);
         if(size < 0) size = (short)(256+size);
-        Log.d(TAG, "parse() size:" + size+" "+Short.SIZE);
+        //Log.d(TAG, "parse() size:" + size+" "+Short.SIZE);
 
         data = new byte[size];
         byteBuf.get(data, 0, data.length);

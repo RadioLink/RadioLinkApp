@@ -154,6 +154,10 @@ public class UDPReceiver {
             setStatus(Status.INITIAL);
         }
 
+        /** UDPチャンネルが有効になった
+         *
+         * @param ctx
+         */
         @Override
         public void channelActive(ChannelHandlerContext ctx){
             Log.d(TAG, "channelActive");
@@ -181,11 +185,13 @@ public class UDPReceiver {
 
             if(status == Status.STUN_SENDING) {
                 //STUN 成功 パブリック IP,ポートを通知
-                //STUN 失敗 null を通知
+                //TODO: STUN 失敗時の処理を書く必要がある タイムアウト等
                 InetSocketAddress publicSocketAddr = StunProtocolUtil.parsePublicInetSocketAddress(data);
-                listener.onStunBinding(publicSocketAddr);
-                //通常ステータスに移行
-                setStatus(Status.ACTIVE);
+                if(publicSocketAddr != null) {
+                    listener.onStunBinding(publicSocketAddr);
+                    //通常ステータスに移行
+                    setStatus(Status.ACTIVE);
+                }
             }
             else if(status == Status.ACTIVE) {
                 //リスナーに受信データを通知する

@@ -37,9 +37,8 @@ public class PacketUtil {
 
     }
 
-    /** テスト
-     *
-     */
+/*
+    //テストコード
     public void test(){
 
         //新規作成
@@ -84,7 +83,7 @@ public class PacketUtil {
             Log.d(TAG, "p size:" + p.getSize() + " " + ByteArrayUtil.toHexString(p.getData()));
         }
     }
-
+*/
 
     /** 送信元識別子(Synchronization source) 作成
      *

@@ -29,18 +29,9 @@ import com.google.zxing.WriterException;
 import com.google.zxing.integration.android.IntentResult;
 import com.nifty.cloud.mb.core.NCMBException;
 
-import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
-import jp.tf_web.radiolink.audio.OpusManager;
-import jp.tf_web.radiolink.audio.RecordManager;
-import jp.tf_web.radiolink.audio.RecordManagerListener;
-import jp.tf_web.radiolink.audio.TrackManager;
 import jp.tf_web.radiolink.billing.InAppBillingUtil;
 import jp.tf_web.radiolink.billing.InAppBillingUtilListener;
 import jp.tf_web.radiolink.billing.util.IabResult;
@@ -49,6 +40,8 @@ import jp.tf_web.radiolink.billing.util.Purchase;
 import jp.tf_web.radiolink.bluetooth.BluetoothAudioDeviceManager;
 import jp.tf_web.radiolink.bluetooth.MediaButtonReceiver;
 import jp.tf_web.radiolink.bluetooth.MediaButtonReceiverListener;
+import jp.tf_web.radiolink.controller.AudioController;
+import jp.tf_web.radiolink.controller.AudioControllerListener;
 import jp.tf_web.radiolink.ncmb.NCMBUtil;
 import jp.tf_web.radiolink.ncmb.db.Channel;
 import jp.tf_web.radiolink.ncmb.db.ChannelUser;
@@ -64,13 +57,8 @@ import jp.tf_web.radiolink.ncmb.listener.LogoutListener;
 import jp.tf_web.radiolink.ncmb.listener.SetChannelIconImageListener;
 import jp.tf_web.radiolink.ncmb.listener.SigninListener;
 import jp.tf_web.radiolink.ncmb.listener.UpdateChannelUserListener;
-import jp.tf_web.radiolink.net.NetWorkUtil;
-import jp.tf_web.radiolink.net.protocol.PacketUtil;
 import jp.tf_web.radiolink.net.protocol.packet.Packet;
-import jp.tf_web.radiolink.net.protocol.packet.Payload;
 import jp.tf_web.radiolink.net.udp.service.UDPService;
-import jp.tf_web.radiolink.net.udp.service.UDPServiceListener;
-import jp.tf_web.radiolink.net.udp.service.UDPServiceReceiver;
 import jp.tf_web.radiolink.qrcode.QRCodeUtil;
 import jp.tf_web.radiolink.qrcode.ScanQRCodeResultListener;
 import jp.tf_web.radiolink.sensor.LightSensorManager;
@@ -98,11 +86,8 @@ public class HomeActivity extends Activity
     //Bluetoothヘッドセットへの接続等
     private BluetoothAudioDeviceManager bluetoothAudioDeviceManager;
 
-    //再生処理をするクラス
-    private TrackManager trackManager;
-
-    //録音関連の処理をするクラス
-    private RecordManager recordManager;
+    //再生,録音,通信処理をするクラス
+    private AudioController audioController;
 
     //MEDIA_BUTTONのクリック受け取り
     private MediaButtonReceiver mediaButtonReceiver;
@@ -113,29 +98,11 @@ public class HomeActivity extends Activity
     //課金処理の実装
     private InAppBillingUtil inAppBillingUtil;
 
-    //Opusデコード,エンコード
-    private OpusManager opusManager;
-
-    //UDPで受信したパケットを受け取るレシーバー
-    private UDPServiceReceiver udpServiceReceiver;
-
     //API処理をするユーテリティ
     private NCMBUtil ncmbUtil;
 
-    //ローカルIP,ポート
-    private InetSocketAddress localAddr;
-
-    //パブリックIP,ポート
-    private InetSocketAddress publicAddr;
-
-    //選択中のチャンネル
+    //JION中のチャンネル
     private Channel activeChannel;
-    
-    //PacketデコードやOPUSデコードする為のスレッド
-    private ExecutorService executor = Executors.newSingleThreadExecutor();
-
-    //選択中のチャンネル
-    private String selectChannelCode = null;
 
     @Override
     public void onCreate(Bundle savedInstanceState)
@@ -148,6 +115,9 @@ public class HomeActivity extends Activity
         Log.d(TAG, " DEVICE:"+Build.DEVICE+" MODEL:"+Build.MODEL);
 
         handler = new Handler();
+
+        //API処理をするユーテリティ
+        ncmbUtil = new NCMBUtil(getApplicationContext(), Config.NCMB_APP_KEY, Config.NCMB_CLIENT_KEY);
 
         mainLayout = (LinearLayout) findViewById(R.id.mainLayout);
 
@@ -198,16 +168,23 @@ public class HomeActivity extends Activity
         Button btnDeleteChannel = (Button)findViewById(R.id.btnDeleteChannel);
         btnDeleteChannel.setOnClickListener(this.btnDeleteChannelOnClickListener);
 
-        //パケット 処理テストボタン
-        Button btnPacketChannel = (Button)findViewById(R.id.btnPacket);
-        btnPacketChannel.setOnClickListener(this.btnPacketOnClickListener);
-
         //QRコードスキャン ボタン
         Button btnQRCodeScan = (Button)findViewById(R.id.btnQRCodeScan);
         btnQRCodeScan.setOnClickListener(this.btnQRCodeScanOnClickListener);
 
         //起動時パラメータを取得
+        onAction();
+    }
+
+    /** 起動時パラメータを取得
+     *
+     * @return
+     */
+    private boolean onAction(){
+        boolean result = false;
+
         String action = getIntent().getAction();
+        //SCHEME起動された場合 チャンネルコードを取得する
         if (Intent.ACTION_VIEW.equals(action)) {
             Uri uri = getIntent().getData();
             if (uri != null) {
@@ -216,16 +193,27 @@ public class HomeActivity extends Activity
                 Log.d(TAG, "channelCode " + channelCode);
                 Toast.makeText(getApplicationContext(),"channelCode:"+channelCode,Toast.LENGTH_SHORT).show();
 
-                selectChannelCode = channelCode;
+                result = true;
+
+                //チャンネルコードで チャンネルを検索して取得
+                ncmbUtil.getChannelList(channelCode, new GetChannelListListener() {
+                    @Override
+                    public void success(List<Channel> channels) {
+                        if(channels.size() != 0){
+                            //TODO: ここでアクティブなチャンネルを直接設定せずに ユーザーに JOIN するか確認するダイアログ等を表示する
+                            joinChannel(channels.get(0));
+                        }
+                    }
+
+                    @Override
+                    public void error(NCMBException e) {
+
+                    }
+                });
+
             }
         }
-    }
-
-    @Override
-    protected void onNewIntent(Intent intent) {
-        super.onNewIntent(intent);
-        Log.d(TAG, "onNewIntent()");
-        setIntent(intent);
+        return result;
     }
 
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -253,29 +241,6 @@ public class HomeActivity extends Activity
         }
     }
 
-    @Override
-    public void onStart() {
-        super.onStart();
-        Log.d(TAG, "onStart()");
-    }
-
-    @Override
-    protected void onResume(){
-        super.onResume();
-        Log.d(TAG, "onResume()");
-    }
-
-    @Override
-    protected void onPause(){
-        super.onPause();
-        Log.d(TAG, "onPause()");
-    }
-
-    @Override
-    protected void onStop(){
-        super.onStop();
-        Log.d(TAG, "onStop()");
-    }
 
     @Override
     protected void onDestroy() {
@@ -289,14 +254,8 @@ public class HomeActivity extends Activity
             inAppBillingUtil.dispose();
         }
 
-        if(opusManager != null){
-            try{
-                opusManager.close();
-            }
-            catch ( IOException e ){
-                Log.e( TAG,"Could not close or flush stream", e );
-            }
-        }
+        //audioManagerを破棄
+        audioController.destroy();
     }
 
     /** メニューを画面に追加
@@ -339,38 +298,14 @@ public class HomeActivity extends Activity
             inAppBillingUtil.setup();
         }
 
-        //API処理をするユーテリティ
-        if(ncmbUtil == null) {
-            ncmbUtil = new NCMBUtil(getApplicationContext(), Config.NCMB_APP_KEY, Config.NCMB_CLIENT_KEY);
-        }
-
-        //OPUSデコード,エンコード
-        if(opusManager == null) {
-            opusManager = new OpusManager(Config.SAMPLE_RATE_IN_HZ,
-                    1,
-                    Config.OPUS_FRAME_SIZE,
-                    Config.OPUS_OUTPUT_BITRATE_BPS);
-        }
-
-        //UDPServiceからの受信を受け取るレシーバー
-        if(udpServiceReceiver == null) {
-            udpServiceReceiver = new UDPServiceReceiver(udpServiceListener);
-            udpServiceReceiver.registerReceiver(getApplicationContext());
+        //再生,録音,通信 処理クラスを初期化
+        if(audioController == null) {
+            audioController = new AudioController(getApplicationContext(), Config.SAMPLE_RATE_IN_HZ, Config.OPUS_FRAME_SIZE * 2, audioControllerListener);
         }
 
         //Bluetoothヘッドセットを利用する
         if(bluetoothAudioDeviceManager == null) {
             bluetoothAudioDeviceManager = new BluetoothAudioDeviceManager(getApplicationContext());
-        }
-
-        //再生処理の初期化
-        if(trackManager == null) {
-            trackManager = new TrackManager(getApplicationContext(), Config.SAMPLE_RATE_IN_HZ);
-        }
-
-        //録音関連処理の初期化
-        if(recordManager == null) {
-            recordManager = new RecordManager(getApplicationContext(), Config.SAMPLE_RATE_IN_HZ, Config.OPUS_FRAME_SIZE * 2, recordManagerListener);
         }
 
         //照度センサーを初期化
@@ -385,25 +320,6 @@ public class HomeActivity extends Activity
         //各クラスの初期化
         initialize();
 
-        //ローカルIPアドレスを取得
-        NetWorkUtil.getLocalIpv4Address(new NetWorkUtil.GetLocalIpv4AddressListener() {
-            @Override
-            public void onResult(final String address) {
-                Log.d(TAG,"local IpAddress:"+address);
-
-                localAddr = new InetSocketAddress(address,Config.BIND_PORT);
-
-                //UDPサービス START
-                Map<String,Object> params = new HashMap<String,Object>(){
-                    {
-                        put(UDPService.KEY_NAME_BIND_ADDRESS, address);
-                        put(UDPService.KEY_NAME_BIND_PORT, Integer.valueOf(Config.BIND_PORT));
-                    }
-                };
-                UDPService.sendCmd(getApplicationContext(), UDPService.CMD_START, params);
-            }
-        });
-
         //Bluetoothヘッドセットがあればそれを使う
         bluetoothAudioDeviceManager.startVoiceRecognition();
 
@@ -412,10 +328,7 @@ public class HomeActivity extends Activity
         mediaButtonReceiver.registerReceiver();
 
         //再生 開始
-        trackManager.start(AudioManager.STREAM_MUSIC);
-
-        //録音 開始
-        recordManager.start();
+        audioController.start(AudioManager.STREAM_MUSIC);
 
         //照度センサーを利用 開始
         lightSensorManager.start();
@@ -424,13 +337,10 @@ public class HomeActivity extends Activity
     //各クラスの終了
     private void stop(){
         //録音 停止
-        if(recordManager != null) {
-            recordManager.stop();
+        if(audioController != null) {
+            audioController.stop();
         }
-        //再生 停止
-        if(trackManager != null) {
-            trackManager.stop();
-        }
+
         //MEDIA_BUTTON イベントを受信する事を止める
         if(mediaButtonReceiver != null) {
             mediaButtonReceiver.unregisterReceiver();
@@ -471,68 +381,7 @@ public class HomeActivity extends Activity
     private View.OnClickListener btnChannelJoinOnClickListener = new View.OnClickListener() {
         @Override
         public void onClick(View v) {
-            //チャンネルコードを指定して検索後に JOIN する
-            join(selectChannelCode);
-        }
-    };
 
-    /** チャンネルコードを指定してチャンネル取得後に JOIN する
-     *
-     * @param channelCode チャンネルコード
-     */
-    private void join(final String channelCode){
-        ncmbUtil.getChannelList(channelCode,new GetChannelListListener() {
-            @Override
-            public void success(List<Channel> channels) {
-                Log.d(TAG, "getChannelList success size:" + channels.size());
-                if (channels.size() == 0){
-                    //TOTO: チャンネルが見つからなかった
-                    Toast.makeText(getApplicationContext(),"channelCode "+channelCode+" not found.",Toast.LENGTH_SHORT).show();
-                    return;
-                }
-
-                //仮で一番新しいチャンネルを選択
-                final Channel c = channels.get(0);
-
-                // ShareActionProviderにインテントの設定
-                ShareActionUtil.getInstance().setShareIntent(getApplicationContext(),c.getChannelCode());
-
-                //チャンネルに JOIN する
-                ncmbUtil.joinChannelUser(c, publicAddr, localAddr, new JoinChannelUserlistener() {
-                    /** 成功
-                     *
-                     * @param channel
-                     */
-                    @Override
-                    public void success(final Channel channel) {
-                        //JOINに成功
-                        activeChannel = channel;
-                        Toast.makeText(getApplicationContext(), "JOIN!", Toast.LENGTH_SHORT).show();
-                        //TODO: GCM 通知
-                    }
-
-                    /** 失敗
-                     *
-                     * @param e
-                     */
-                    @Override
-                    public void error(NCMBException e) {
-                        Log.e(TAG, "error:" + e);
-                    }
-                });
-            }
-
-            @Override
-            public void error(NCMBException e) {
-                Log.e(TAG, "getChannelList error " + e);
-            }
-        });
-    }
-
-    //Channel Exit ボタンクリック時
-    private View.OnClickListener btnChannelExitOnClickListener = new View.OnClickListener() {
-        @Override
-        public void onClick(View v) {
             //チャンネル一覧から 一番新しいチャンネルを選択する
             ncmbUtil.getChannelList(new GetChannelListListener() {
                 @Override
@@ -543,28 +392,8 @@ public class HomeActivity extends Activity
                     //仮で一番新しいチャンネルを選択
                     final Channel c = channels.get(0);
 
-                    //チャンネルに Exit する
-                    ncmbUtil.exitChannelUser(c, publicAddr, localAddr, new ExitChannelUserlistener() {
-                        /** 成功
-                         *
-                         */
-                        @Override
-                        public void success() {
-                            //EXIT に成功
-                            activeChannel = null;
-                            Toast.makeText(getApplicationContext(), "EXIT!", Toast.LENGTH_SHORT).show();
-                            //TODO: GCM 通知
-                        }
-
-                        /** 失敗
-                         *
-                         * @param e
-                         */
-                        @Override
-                        public void error(NCMBException e) {
-                            Log.e(TAG, "error:" + e);
-                        }
-                    });
+                    //チャンネルに JOIN する
+                    joinChannel(c);
                 }
 
                 @Override
@@ -572,6 +401,89 @@ public class HomeActivity extends Activity
                     Log.e(TAG, "getChannelList error " + e);
                 }
             });
+
+
+        }
+    };
+
+    /** チャンネルに JOIN する
+     *
+     * @param channel チャンネル
+     */
+    private void joinChannel(final Channel channel){
+        Log.d(TAG,"joinChannel");
+        if(channel == null){
+            Log.d(TAG,"channel is null");
+            return;
+        }
+
+        // ShareActionProviderのチャンネルコードを更新 インテントの設定
+        ShareActionUtil.getInstance().setShareIntent(getApplicationContext(), channel.getChannelCode());
+
+        //チャンネルに JOIN する
+        ncmbUtil.joinChannelUser(channel, audioController.getPublicSocketAddress(), audioController.getLocalSocketAddress(), new JoinChannelUserlistener() {
+            /** 成功
+             *
+             * @param channel
+             */
+            @Override
+            public void success(final Channel channel) {
+                //JOINに成功
+                activeChannel = channel;
+                audioController.setActiveChannel( channel );
+                Toast.makeText(getApplicationContext(), "JOIN!", Toast.LENGTH_SHORT).show();
+                //TODO: GCM 通知
+            }
+
+            /** 失敗
+             *
+             * @param e
+             */
+            @Override
+            public void error(NCMBException e) {
+                Log.e(TAG, "error:" + e);
+            }
+        });
+    }
+
+    /** 指定チャンネルからEXITする
+     *
+     * @param channel
+     */
+    private void exitChannel(final Channel channel){
+        //チャンネルから Exit する
+        ncmbUtil.exitChannelUser(channel, audioController.getPublicSocketAddress(), audioController.getLocalSocketAddress(), new ExitChannelUserlistener() {
+            /** 成功
+             *
+             */
+            @Override
+            public void success() {
+                //EXIT に成功
+                activeChannel = null;
+                audioController.setActiveChannel( null );
+                Toast.makeText(getApplicationContext(), "EXIT!", Toast.LENGTH_SHORT).show();
+
+                //TODO: GCM 通知
+            }
+
+            /** 失敗
+             *
+             * @param e
+             */
+            @Override
+            public void error(NCMBException e) {
+                Log.e(TAG, "error:" + e);
+            }
+        });
+
+    }
+
+    //Channel Exit ボタンクリック時
+    private View.OnClickListener btnChannelExitOnClickListener = new View.OnClickListener() {
+        @Override
+        public void onClick(View v) {
+            //ログイン中のチャンネルからEXIT
+            exitChannel(activeChannel);
         }
     };
 
@@ -802,15 +714,7 @@ public class HomeActivity extends Activity
         }
     };
 
-    //パケットテストボタン
-    private View.OnClickListener btnPacketOnClickListener = new View.OnClickListener() {
-        @Override
-        public void onClick(View v) {
-            PacketUtil.getInstance().test();
-        }
-    };
-
-    //パケットテストボタン
+    //QRコード ボタン
     private View.OnClickListener btnQRCodeScanOnClickListener = new View.OnClickListener() {
         @Override
         public void onClick(View v) {
@@ -831,53 +735,6 @@ public class HomeActivity extends Activity
         }
     };
 
-    /** 録音結果を受け取るリスナー
-     *
-     */
-    private RecordManagerListener recordManagerListener = new RecordManagerListener(){
-
-        /** 録音結果の通知
-         *
-         * @param data 録音したPCMデータ
-         * @param size 録音データのサイズ
-         * @param volume 録音ボリュームの最大値
-         */
-        @Override
-        public void onAudioRecord(final byte[] data,final int size,final short volume) {
-            if(activeChannel == null){
-                //Log.d(TAG, "activeChannel is null");
-                return;
-            }
-
-            handler.post(new Runnable() {
-                @Override
-                public void run() {
-                    //Log.d(TAG, "volume:"+volume);
-                    tv.setText("volume:" + volume);
-                }
-            });
-            //TODO: volume閾値での簡易VAD
-            if(volume < Config.VOLUME_THRESHOLD){
-                //仮でVAD識別の為に背景色を変更
-                setBackgroundColor(Color.RED);
-                return;
-            }
-            //仮でVAD識別の為に背景色を変更
-            setBackgroundColor(Color.GREEN);
-
-            //TODO: volume を 画面に反映させる
-
-            //OPUSエンコード
-            byte[] opus = opusManager.encode(data);
-            if(opus.length > 1) {
-                //パケットにまとめてから UDPでユーザーに送信する
-                Packet packet = PacketUtil.getInstance().createPacket();
-                packet.addPayload(opus);
-
-                udpServiceSendByteArray(packet.toByteArray());
-            }
-        }
-    };
 
     private void setBackgroundColor(final int color){
         handler.post(new Runnable() {
@@ -987,113 +844,34 @@ public class HomeActivity extends Activity
         }
     };
 
-    /** UDPサービスに byte[]データを送信
+    /** 録音,再生,送信,受信 処理のリスナー
      *
-     * @param src  byte[]データ
      */
-    private void udpServiceSendByteArray(final byte[] src){
-        if(activeChannel == null) return;
-        //データを送信
-        String publicIp = publicAddr.getAddress().getHostAddress();
-        int publicPort = publicAddr.getPort();
-        for(ChannelUser cu:activeChannel.getChannelUserList()){
-            Log.d(TAG,"cu:"+cu.getUser().getUserName());
-            //自分以外に送信
-            String ip = cu.publicSocketAddress.getAddress().getHostAddress();
-            int port = cu.publicSocketAddress.getPort();
-            Log.d(TAG," ip:"+ip+":"+port+" publicIp:"+publicIp+":"+publicPort);
-            if((ip.equals(publicIp)) && (publicPort == port)){
-                continue;
-            }
-            //送信
-            udpServiceSendByteArray(cu,src);
-        }
-    }
+    private AudioControllerListener audioControllerListener = new AudioControllerListener(){
 
-    /** UDPサービスに byte[]データを送信
-     *
-     * @param channelUser チャンネルユーザー
-     * @param src  byte[]データ
-     */
-    private void udpServiceSendByteArray(final ChannelUser channelUser,final byte[] src){
-        //データを送信
-        Map<String,Object> params = new HashMap<String,Object>(){
-            {
-                //送信先パブリックIP,ポート
-                put(UDPService.KEY_NAME_CONNECT_HOST, channelUser.publicSocketAddress.getAddress().getHostAddress());
-                put(UDPService.KEY_NAME_CONNECT_PORT, Integer.valueOf(channelUser.publicSocketAddress.getPort()));
-
-                //送信先ローカルIPポート
-                put(UDPService.KEY_NAME_SEND_HOST, channelUser.localSocketAddress.getAddress().getHostAddress());
-                put(UDPService.KEY_NAME_SEND_PORT, Integer.valueOf(channelUser.localSocketAddress.getPort()));
-
-                put(UDPService.KEY_NAME_SEND_BUFFER, src);
-            }
-        };
-        UDPService.sendCmd(getApplicationContext(), UDPService.CMD_SEND, params);
-    }
-
-    //ブロードキャストレシーバーから受信したイベントを受け取る
-    private UDPServiceListener udpServiceListener = new UDPServiceListener(){
-
-        /** STUN Binding 結果を通知
+        /** 録音データが通知される
          *
-         * @param publicSocketAddr パブリックIP,ポート
+         * @param packet 録音したデータのパケット
+         * @param volume 録音ボリュームの最大値
          */
         @Override
-        public void onStunBinding(final InetSocketAddress publicSocketAddr){
-            Log.d(TAG, "onStunBinding");
-            //パブリックIP,ポートを保存
-            publicAddr = publicSocketAddr;
-        }
-
-        /** UDPServiceから届いいた メッセージを受信した場合
-         *
-         * @param cmd コマンド文字列
-         * @param data 受信した byte[]
-         */
-        @Override
-        public void onReceive(final String cmd, final byte[] data) {
-            Log.d(TAG, "onReceive cmd:" + cmd);
-            if(cmd == null){
+        public void onAudioRecord(final Packet packet, short volume) {
+            //volume閾値で画面を更新
+            if(volume < Config.VOLUME_THRESHOLD){
+                //仮で背景色を設定
+                setBackgroundColor(Color.RED);
                 return;
             }
+            setBackgroundColor(Color.GREEN);
+        }
 
-            if (cmd.equals(UDPService.CMD_RECEIVE)) {
-                //チャンネルへのJOIN常態を確認
-                if(activeChannel == null){
-                    return;
-                }
-                if(data == null){
-                    Log.d(TAG, "buf is null");
-                    return;
-                }
-                //受信データのサイズ
-                Log.i(TAG, "receive data size:"+data.length);
+        /** データを受信した時通知される
+         *
+         * @param packet 受信したパケット
+         */
+        @Override
+        public void onReceive(Packet packet) {
 
-                //onReceiveを成る可く早く終わらせたいので 別スレッドでエンコード等を実行
-                //遅いと遅延が発生する
-                executor.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        //バイト配列からパケットを生成
-                        Packet packet = PacketUtil.getInstance().createPacket(data);
-                        //TODO: シーケンス番号順や送信元識別子順にソートする
-                        //TODO: タイムスタンプが古い物は破棄
-
-                        //OPUSデコードする
-                        List<Payload> payload = packet.getPayload();
-                        for(Payload p:payload){
-                            //ペイロードから音を取り出す
-                            byte[] pcm = opusManager.decode(p.getData(),Config.OPUS_FRAME_SIZE);
-
-                            //再生
-                            trackManager.write(pcm, 0, pcm.length);
-                        }
-                    }
-                });
-
-            }
         }
     };
 }
