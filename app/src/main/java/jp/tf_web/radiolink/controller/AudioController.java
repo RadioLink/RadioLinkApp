@@ -51,7 +51,7 @@ public class AudioController {
     private int bufSize;
 
     //PacketデコードやOPUSデコードする為のスレッド
-    private ExecutorService executor = Executors.newSingleThreadExecutor();
+    private ExecutorService executor = Executors.newCachedThreadPool();
 
     //Opusデコード,エンコード
     private OpusManager opusManager;
