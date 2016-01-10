@@ -71,13 +71,14 @@ public class WritePacketThread extends Thread {
      *
      * @param packet
      */
-    public void addPacket(final Packet packet){
+    public synchronized void addPacket(final Packet packet){
         //送信元識別子別にオーディオトラックを生成
         String ssrc = packet.getHeader().getSsrc();
         if(trackManagerMap.containsKey(ssrc) == false){
             //未登録の場合 trackManager を生成する
             TrackManager trackManager = new TrackManager(context, opusManager.getSamplingRate());
             trackManager.start(audioStream);
+            Log.d(TAG, "AudioSessionId:" + trackManager.getAudioSessionId() + " ssrc:"+ssrc);
             trackManagerMap.put(ssrc, trackManager);
         }
 

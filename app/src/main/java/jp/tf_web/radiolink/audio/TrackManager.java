@@ -88,6 +88,15 @@ public class TrackManager {
         audioTrack.stop();
     }
 
+    /** オーディオセッションIDを取得
+     *
+     * @return
+     */
+    public int getAudioSessionId(){
+        if(audioTrack == null) return 0;
+        return audioTrack.getAudioSessionId();
+    }
+
     /** オーディオバッファに書き込む
      *
      * @param pcm PCMデータ
