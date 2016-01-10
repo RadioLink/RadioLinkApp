@@ -49,6 +49,8 @@ public class OpusManager
 	private native int nativeEncodeBytes( short[] in, byte[] out );
 	private native boolean nativeReleaseEncoder();
 
+	private int samplingRate;
+
 	static
 	{
 		try
@@ -70,7 +72,17 @@ public class OpusManager
 	 * @param frameSize Number of samples per frame of input signal
 	 */
 	public OpusManager(int samplingRate, int numberOfChannels, int frameSize,int outputBitrateBps) {
+		this.samplingRate = samplingRate;
 		this.nativeInit(samplingRate, numberOfChannels, frameSize, outputBitrateBps);
+	}
+
+
+	/** 設定されているサンプリングレートを取得
+	 *
+	 * @return
+	 */
+	public int getSamplingRate(){
+		return this.samplingRate;
 	}
 
 	/**

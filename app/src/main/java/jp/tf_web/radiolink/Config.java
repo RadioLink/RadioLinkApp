@@ -56,6 +56,6 @@ public class Config {
     //スキーム起動のシェアの為のリダイレクトAPI
     public static final String SCHEME_REDIRECT_API = "https://mb.api.cloud.nifty.com/2013-09-01/applications/mtuVqeiYFQZrh9iT/publicFiles/redirect.html?u=";
 
-    //パケットの有効期限 [ミリ秒]
-    public static long PACKET_TIMESTAMP_EXPIRE_MSEC = 1000;
+    //パケットの有効期限 [ミリ秒] 5000ミリ秒遅れたら破棄
+    public static long PACKET_TIMESTAMP_EXPIRE_MSEC = 60*1000;
 }

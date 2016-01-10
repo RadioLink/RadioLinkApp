@@ -3,8 +3,12 @@ package jp.tf_web.radiolink.audio;
 import android.content.Context;
 import android.media.AudioFormat;
 import android.media.AudioTrack;
-import android.os.Build;
+import android.os.*;
+import android.os.Process;
 import android.util.Log;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /** 再生 処理をする実装するクラス
  *
@@ -21,6 +25,9 @@ public class TrackManager {
 
     //再生 サンプリングレート
     private int sampleRateInHz;
+
+    //再生用データを送るスレッドプール
+    private ExecutorService writeExecutor = Executors.newSingleThreadExecutor();
 
     /** コンストラクタ
      *
@@ -43,7 +50,7 @@ public class TrackManager {
         }
 
         // 必要となるバッファサイズを計算
-        int bufSize = android.media.AudioTrack.getMinBufferSize(
+        int bufSize = AudioTrack.getMinBufferSize(
                 sampleRateInHz,
                 AudioFormat.CHANNEL_OUT_MONO,
                 AudioFormat.ENCODING_PCM_16BIT);
@@ -90,8 +97,16 @@ public class TrackManager {
     public void write(final byte[] pcm,final int offset,final int size){
         //再生バッファに送る
         if(Build.VERSION.SDK_INT < Build.VERSION_CODES.M){
-            //18〜22 オーディオ書き込みでブロッキング
-            audioTrack.write(pcm, offset, size);
+            //23未満 オーディオ書き込みでブロッキングされるので executor で実行
+            writeExecutor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    //スレッド優先度を変更
+                    Process.setThreadPriority(Process.THREAD_PRIORITY_AUDIO);
+
+                    audioTrack.write(pcm, offset, size);
+                }
+            });
         }
         else{
             //23 以上 非同期で書き込みできるのでこちらを使う

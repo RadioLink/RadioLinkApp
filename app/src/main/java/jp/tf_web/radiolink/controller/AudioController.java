@@ -1,6 +1,7 @@
 package jp.tf_web.radiolink.controller;
 
 import android.content.Context;
+import android.media.AudioManager;
 import android.util.Log;
 
 import java.io.IOException;
@@ -37,6 +38,9 @@ public class AudioController {
     //リスナー
     private AudioControllerListener listener;
 
+    //リスナー通知処理をする
+    private ExecutorService listenerExecutor = Executors.newSingleThreadExecutor();
+
     //コンテキスト
     private Context context;
 
@@ -51,9 +55,6 @@ public class AudioController {
 
     //Opusデコード,エンコード
     private OpusManager opusManager;
-
-    //再生処理をするクラス
-    private TrackManager trackManager;
 
     //録音関連の処理をするクラス
     private RecordManager recordManager;
@@ -76,8 +77,13 @@ public class AudioController {
     //再生処理をする為のスレッド
     private WritePacketThread writePacketThread;
 
+
     /** コンストラクタ
      *
+     * @param context コンテキスト
+     * @param sampleRateInHz サンプリングレート
+     * @param bufSize 録音バッファサイズ
+     * @param listener イベント通知リスナー
      */
     public AudioController(final Context context, final int sampleRateInHz, final int bufSize,final AudioControllerListener listener){
         this.context = context;
@@ -92,6 +98,7 @@ public class AudioController {
      * @param audioStream オーディオストリーム種類
      */
     public void initialize(final int audioStream) {
+
         //OPUSデコード,エンコード
         if(opusManager == null) {
             opusManager = new OpusManager(Config.SAMPLE_RATE_IN_HZ,
@@ -100,23 +107,21 @@ public class AudioController {
                     Config.OPUS_OUTPUT_BITRATE_BPS);
         }
 
-        //UDPServiceからの受信を受け取るレシーバー
-        if(udpServiceReceiver == null) {
-            udpServiceReceiver = new UDPServiceReceiver(udpServiceListener);
-            udpServiceReceiver.registerReceiver(this.context);
-        }
-
         //再生処理の初期化
-        if(trackManager == null) {
-            trackManager = new TrackManager(this.context, this.sampleRateInHz);
-
+        if(writePacketThread == null) {
             //再生処理をするスレッドを初期化
-            writePacketThread = new WritePacketThread(opusManager,trackManager);
+            writePacketThread = new WritePacketThread(this.context, opusManager);
         }
 
         //録音関連処理の初期化
         if(recordManager == null) {
             recordManager = new RecordManager(this.context, this.sampleRateInHz, this.bufSize, recordManagerListener);
+        }
+
+        //UDPServiceからの受信を受け取るレシーバー
+        if(udpServiceReceiver == null) {
+            udpServiceReceiver = new UDPServiceReceiver(udpServiceListener);
+            udpServiceReceiver.registerReceiver(this.context);
         }
     }
 
@@ -146,8 +151,6 @@ public class AudioController {
             }
         });
 
-        //再生
-        trackManager.start(audioStream);
         //録音
         recordManager.start();
     }
@@ -156,7 +159,7 @@ public class AudioController {
      *
      */
     public void stop(){
-        trackManager.stop();
+        writePacketThread.stopRunning();
         recordManager.stop();
     }
 
@@ -217,6 +220,10 @@ public class AudioController {
         for(ChannelUser cu:activeChannel.getChannelUserList()){
             Log.d(TAG,"cu:"+cu.getUser().getUserName());
             //自分以外に送信
+            if(cu.publicSocketAddress == null){
+                Log.d(TAG,"cu.publicSocketAddress is null");
+                continue;
+            }
             String ip = cu.publicSocketAddress.getAddress().getHostAddress();
             int port = cu.publicSocketAddress.getPort();
             Log.d(TAG," ip:"+ip+":"+port+" publicIp:"+publicIp+":"+publicPort);
@@ -270,11 +277,16 @@ public class AudioController {
             byte[] opus = opusManager.encode(data);
             if(opus.length > 1) {
                 //パケットにまとめてから UDPでユーザーに送信する
-                Packet packet = PacketUtil.getInstance().createPacket();
+                final Packet packet = PacketUtil.getInstance().createPacket();
                 packet.addPayload(opus);
 
                 //リスナーにパケットとボリュームを通知
-                listener.onAudioRecord(packet, volume);
+                listenerExecutor.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        listener.onAudioRecord(packet, volume);
+                    }
+                });
 
                 //volume閾値での簡易VAD
                 if(volume > Config.VOLUME_THRESHOLD) {
@@ -283,30 +295,6 @@ public class AudioController {
             }
         }
     };
-
-    /** 受信パケットのバイト配列を再生用に書き込む
-     *
-     * @param data
-     */
-    private void write(final byte[] data){
-        executor.execute(new Runnable() {
-            @Override
-            public void run() {
-                //バイト配列からパケットを生成
-                Packet packet = PacketUtil.getInstance().createPacket(data);
-
-                //OPUSデコードする
-                List<Payload> payload = packet.getPayload();
-                for(Payload p:payload){
-                    //ペイロードから音を取り出す
-                    byte[] pcm = opusManager.decode(p.getData(),Config.OPUS_FRAME_SIZE);
-
-                    //再生
-                    trackManager.write(pcm, 0, pcm.length);
-                }
-            }
-        });
-    }
 
     //ブロードキャストレシーバーから受信したイベントを受け取る
     private UDPServiceListener udpServiceListener = new UDPServiceListener(){
@@ -318,7 +306,6 @@ public class AudioController {
         @Override
         public void onStunBinding(final InetSocketAddress publicSocketAddr){
             Log.d(TAG, "onStunBinding");
-            //TODO: 沢山パケットが届いている状態だと STUNアドレス解決に失敗して publicAddr が null の場合がある
             //パブリックIP,ポートを保存
             publicAddr = publicSocketAddr;
         }
@@ -345,29 +332,38 @@ public class AudioController {
                 //受信データのサイズ
                 Log.i(TAG, "receive data size:"+data.length);
 
+                //再生を開始
+                writePacketThread.startRunning(AudioManager.STREAM_MUSIC);
+
                 //onReceiveを成る可く早く終わらせたいので 別スレッドでエンコード等を実行
+
                 //遅いと遅延が発生する
                 executor.execute(new Runnable() {
                     @Override
                     public void run() {
                         //バイト配列からパケットを生成
-                        Packet packet = PacketUtil.getInstance().createPacket(data);
+                        final Packet packet = PacketUtil.getInstance().createPacket(data);
 
                         //タイムスタンプが古い場合は破棄
-                        //TODO: 送信元の時計とのズレがあるとあるとパケットが破棄される数が増える
+                        //送信元の時計とのズレがあるとあるとパケットが破棄される数が増える
                         long ct = System.currentTimeMillis();
                         long t = ct - packet.getHeader().getTimeStamp();
-                        //Log.d(TAG,"t:"+t+" ct:"+ct+" ht:"+packet.getHeader().getTimeStamp());
-                        if( t > Config.PACKET_TIMESTAMP_EXPIRE_MSEC) return;
+                        Log.d(TAG, "t:" + t + " ct:" + ct + " ht:" + packet.getHeader().getTimeStamp());
+                        if( t > Config.PACKET_TIMESTAMP_EXPIRE_MSEC){
+                            Log.w(TAG,"timestamp expire:"+t);
+                            return;
+                        }
 
                         //リスナーに通知
-                        listener.onReceive(packet);
+                        listenerExecutor.execute(new Runnable() {
+                            @Override
+                            public void run() {
+                                listener.onReceive(packet);
+                            }
+                        });
 
                         //パケットリストに追加
                         writePacketThread.addPacket(packet);
-
-                        //再生を開始
-                        writePacketThread.startRunning();
                     }
                 });
 
