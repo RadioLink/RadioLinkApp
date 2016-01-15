@@ -1,4 +1,4 @@
-package jp.tf_web.radiolink.ncmb.listener;
+package jp.tf_web.radiolink.ncmb.db.listener;
 
 import com.nifty.cloud.mb.core.NCMBException;
 

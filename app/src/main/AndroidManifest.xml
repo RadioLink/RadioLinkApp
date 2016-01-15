@@ -23,6 +23,9 @@
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="com.google.android.c2dm.permission.RECEIVE" />
 
+    <permission android:name="jp.tf_web.radiolink.permission.C2D_MESSAGE" android:protectionLevel="signature" />
+    <uses-permission android:name="jp.tf_web.radiolink.permission.C2D_MESSAGE" />
+
     <uses-permission android:name="android.permission.CAMERA"/>
     <uses-permission android:name="android.permission.FLASHLIGHT"/>
 
@@ -31,46 +34,88 @@
       android:fullBackupContent="false"
       android:icon="@mipmap/ic_launcher"
       android:label="@string/app_name">
-    <activity android:name=".HomeActivity" android:label="@string/app_name">
-      <intent-filter>
-        <action android:name="android.intent.action.MAIN" />
-        <category android:name="android.intent.category.LAUNCHER" />
-      </intent-filter>
-      <!-- シェアパラメータ 受け取り -->
-      <intent-filter>
-        <action android:name="android.intent.action.VIEW" />
-        <category android:name="android.intent.category.DEFAULT" />
-        <category android:name="android.intent.category.BROWSABLE" />
-        <data android:scheme="@string/scheme" android:host="@string/scheme_host_share" />
-      </intent-filter>
-    </activity>
 
-    <activity android:name=".MediaButtonActivity"
-        android:label="@string/app_name"
-        android:theme="@android:style/Theme.Translucent">
-      <!-- ヘッドセットのボタンのイベント受付 intent-filter -->
-      <intent-filter>
-        <action android:name="android.intent.action.VOICE_COMMAND" />
-        <category android:name="android.intent.category.DEFAULT" />
-      </intent-filter>
-    </activity>
-    <!-- ヘッドセットのボタンのイベント受付の為のレシーバー -->
-    <receiver android:name=".bluetooth.BluetoothControlReceiver">
-        <intent-filter>
-            <action android:name="android.intent.action.MEDIA_BUTTON" />
-        </intent-filter>
-    </receiver>
+        <activity android:name=".HomeActivity" android:label="@string/app_name">
+          <intent-filter>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+          </intent-filter>
+          <!-- シェアパラメータ 受け取り -->
+          <intent-filter>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="@string/scheme" android:host="@string/scheme_host_share" />
+          </intent-filter>
+        </activity>
 
-    <!-- UDP送受信サービス -->
-    <service android:name=".net.udp.service.UDPService" />
+        <!--
+        <activity android:name=".TestActivity" android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="@string/scheme" android:host="@string/scheme_host_test" />
+            </intent-filter>
+        </activity>
+        -->
 
-    <!-- QRコード処理の為のアクティビティ -->
-    <activity
-        android:name=".QRCodeActivity"
-        android:screenOrientation="fullSensor"
-        android:stateNotNeeded="true"
-        android:theme="@style/zxing_CaptureTheme"
-        android:windowSoftInputMode="stateAlwaysHidden" />
+        <activity android:name=".MediaButtonActivity"
+            android:label="@string/app_name"
+            android:theme="@android:style/Theme.Translucent">
+          <!-- ヘッドセットのボタンのイベント受付 intent-filter -->
+          <intent-filter>
+            <action android:name="android.intent.action.VOICE_COMMAND" />
+            <category android:name="android.intent.category.DEFAULT" />
+          </intent-filter>
+        </activity>
+        <!-- ヘッドセットのボタンのイベント受付の為のレシーバー -->
+        <receiver android:name=".bluetooth.BluetoothControlReceiver">
+            <intent-filter>
+                <action android:name="android.intent.action.MEDIA_BUTTON" />
+            </intent-filter>
+        </receiver>
 
+        <!-- UDP送受信サービス -->
+        <service android:name=".net.udp.service.UDPService" />
+
+        <!-- QRコード処理の為のアクティビティ -->
+        <activity
+            android:name=".QRCodeActivity"
+            android:screenOrientation="fullSensor"
+            android:stateNotNeeded="true"
+            android:theme="@style/zxing_CaptureTheme"
+            android:windowSoftInputMode="stateAlwaysHidden" />
+
+        <!-- GCM -->
+        <receiver
+            android:name="com.nifty.cloud.mb.core.NCMBGcmReceiver"
+            android:exported="true"
+            android:permission="com.google.android.c2dm.permission.SEND">
+            <intent-filter>
+                <action android:name="com.google.android.c2dm.intent.RECEIVE"/>
+                <category android:name="jp.tf_web.radiolink"/>
+            </intent-filter>
+        </receiver>
+        <service
+            android:name="com.nifty.cloud.mb.core.NCMBGcmListenerService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.android.c2dm.intent.RECEIVE"/>
+            </intent-filter>
+        </service>
+
+        <!-- プッシュ通知タップ時に起動するActivityの設定 -->
+        <meta-data android:name="openPushStartActivity" android:value=".HomeActivity"/>
+
+        <!-- 通知エリアに表示されるアイコンの設定 -->
+        <meta-data android:name="smallIcon" android:resource="@drawable/icon_dummy"/>
+
+        <!-- 通知エリアにプッシュ通知を複数表示する設定　0:最新のみ表示 , 1:複数表示 -->
+        <meta-data android:name="notificationOverlap" android:value="0"/>
     </application>
 </manifest>

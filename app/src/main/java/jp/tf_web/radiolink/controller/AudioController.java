@@ -159,8 +159,12 @@ public class AudioController {
      *
      */
     public void stop(){
+        activeChannel = null;
         writePacketThread.stopRunning();
+        writePacketThread = null;
+
         recordManager.stop();
+        recordManager = null;
     }
 
     /** クラスの利用停止

@@ -1,14 +1,14 @@
-package jp.tf_web.radiolink.ncmb.listener;
+package jp.tf_web.radiolink.ncmb.db.listener;
 
 import com.nifty.cloud.mb.core.NCMBException;
 
 import jp.tf_web.radiolink.ncmb.db.Channel;
 
-/** チャンネル作成
+/** チャンネルユーザー一覧を更新
  *
- * Created by furukawanobuyuki on 2016/01/02.
+ * Created by furukawanobuyuki on 2016/01/03.
  */
-public interface CreateChannelListener {
+public interface UpdateChannelUserListener {
     /**  成功
      *
      * @param channel

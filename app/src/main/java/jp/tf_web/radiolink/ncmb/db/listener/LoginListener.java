@@ -1,13 +1,14 @@
-package jp.tf_web.radiolink.ncmb.listener;
+package jp.tf_web.radiolink.ncmb.db.listener;
 
 import com.nifty.cloud.mb.core.NCMBException;
+
 import jp.tf_web.radiolink.ncmb.db.User;
 
-/** 新規ユーザー登録のリスナー
+/** ログイン処理のリスナー
  *
  * Created by furukawanobuyuki on 2016/01/02.
  */
-public interface SigninListener {
+public interface LoginListener {
     /** 成功
      *
      * @param user

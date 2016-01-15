@@ -111,8 +111,10 @@ public class InAppBillingUtil {
     /** 購入ボタンを押した時に購入リクエストを送る
      *
      * @param activity
+     * @param productItemId
+     * @return
      */
-    public boolean onBuyButtonClicked(final Activity activity) {
+    public boolean onBuyButtonClicked(final Activity activity,final String productItemId) {
 
         // 端末がサブスクリプション課金に対応しているかを確認する
         if (!iabHelper.subscriptionsSupported()) {
@@ -123,7 +125,7 @@ public class InAppBillingUtil {
         Log.d("IAB", "購入処理を開始");
         try {
             iabHelper.launchPurchaseFlow(activity,
-                                            Config.PRODUCT_ITEM_1_ID,
+                                            productItemId,
                                             requestCode,
                                             purchaseFinishedListener,
                                             null);

@@ -1,11 +1,8 @@
-package jp.tf_web.radiolink.ncmb.listener;
+package jp.tf_web.radiolink.ncmb.db.listener;
 
 import com.nifty.cloud.mb.core.NCMBException;
 
-import java.util.List;
-
 import jp.tf_web.radiolink.ncmb.db.Channel;
-import jp.tf_web.radiolink.ncmb.db.ChannelUser;
 
 /**
  * Created by furukawanobuyuki on 2016/01/03.

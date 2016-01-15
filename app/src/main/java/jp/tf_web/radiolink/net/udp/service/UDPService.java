@@ -189,24 +189,26 @@ public class UDPService extends Service {
             Log.d(TAG, "SEND");
             //UDPで送信処理をする
             if(executor == null) executor = Executors.newSingleThreadExecutor();
-            executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    //接続先
-                    final String cHost = bundle.getString(UDPService.KEY_NAME_CONNECT_HOST);
-                    final int cPort = bundle.getInt(UDPService.KEY_NAME_CONNECT_PORT);
-                    final InetSocketAddress connectAddr = new InetSocketAddress(cHost, cPort);
 
-                    //送信先
-                    final String host = bundle.getString(UDPService.KEY_NAME_SEND_HOST);
-                    final int port = bundle.getInt(UDPService.KEY_NAME_SEND_PORT);
-                    final InetSocketAddress addr = new InetSocketAddress(host, port);
+            if(udpReceiver != null) {
+                executor.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        //接続先
+                        final String cHost = bundle.getString(UDPService.KEY_NAME_CONNECT_HOST);
+                        final int cPort = bundle.getInt(UDPService.KEY_NAME_CONNECT_PORT);
+                        final InetSocketAddress connectAddr = new InetSocketAddress(cHost, cPort);
 
-                    final byte[] buf = bundle.getByteArray(UDPService.KEY_NAME_SEND_BUFFER);
-                    udpReceiver.writeUDP(connectAddr, addr, buf);
-                }
-            });
+                        //送信先
+                        final String host = bundle.getString(UDPService.KEY_NAME_SEND_HOST);
+                        final int port = bundle.getInt(UDPService.KEY_NAME_SEND_PORT);
+                        final InetSocketAddress addr = new InetSocketAddress(host, port);
 
+                        final byte[] buf = bundle.getByteArray(UDPService.KEY_NAME_SEND_BUFFER);
+                        udpReceiver.writeUDP(connectAddr, addr, buf);
+                    }
+                });
+            }
         }
         else if (cmd.equals(CMD_RECEIVE)) {
             Log.d(TAG, "RECEIVE");
