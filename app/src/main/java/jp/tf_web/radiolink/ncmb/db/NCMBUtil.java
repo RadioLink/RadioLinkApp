@@ -1,8 +1,7 @@
-package jp.tf_web.radiolink.ncmb;
+package jp.tf_web.radiolink.ncmb.db;
 
 import android.content.Context;
 import android.util.Log;
-import android.widget.Toast;
 
 import com.nifty.cloud.mb.core.DoneCallback;
 import com.nifty.cloud.mb.core.FetchFileCallback;
@@ -24,18 +23,18 @@ import java.util.List;
 import jp.tf_web.radiolink.ncmb.db.Channel;
 import jp.tf_web.radiolink.ncmb.db.ChannelUser;
 import jp.tf_web.radiolink.ncmb.db.User;
-import jp.tf_web.radiolink.ncmb.listener.CreateChannelListener;
-import jp.tf_web.radiolink.ncmb.listener.DeleteChannelListener;
-import jp.tf_web.radiolink.ncmb.listener.ExitChannelUserlistener;
-import jp.tf_web.radiolink.ncmb.listener.GetChannelIconImageListener;
-import jp.tf_web.radiolink.ncmb.listener.GetChannelListListener;
-import jp.tf_web.radiolink.ncmb.listener.GetChannelUserListListener;
-import jp.tf_web.radiolink.ncmb.listener.JoinChannelUserlistener;
-import jp.tf_web.radiolink.ncmb.listener.LoginListener;
-import jp.tf_web.radiolink.ncmb.listener.LogoutListener;
-import jp.tf_web.radiolink.ncmb.listener.SetChannelIconImageListener;
-import jp.tf_web.radiolink.ncmb.listener.SigninListener;
-import jp.tf_web.radiolink.ncmb.listener.UpdateChannelUserListener;
+import jp.tf_web.radiolink.ncmb.db.listener.CreateChannelListener;
+import jp.tf_web.radiolink.ncmb.db.listener.DeleteChannelListener;
+import jp.tf_web.radiolink.ncmb.db.listener.ExitChannelUserlistener;
+import jp.tf_web.radiolink.ncmb.db.listener.GetChannelIconImageListener;
+import jp.tf_web.radiolink.ncmb.db.listener.GetChannelListListener;
+import jp.tf_web.radiolink.ncmb.db.listener.GetChannelUserListListener;
+import jp.tf_web.radiolink.ncmb.db.listener.JoinChannelUserlistener;
+import jp.tf_web.radiolink.ncmb.db.listener.LoginListener;
+import jp.tf_web.radiolink.ncmb.db.listener.LogoutListener;
+import jp.tf_web.radiolink.ncmb.db.listener.SetChannelIconImageListener;
+import jp.tf_web.radiolink.ncmb.db.listener.SigninListener;
+import jp.tf_web.radiolink.ncmb.db.listener.UpdateChannelUserListener;
 
 /** APIサーバとの処理の実装
  *
@@ -44,8 +43,22 @@ import jp.tf_web.radiolink.ncmb.listener.UpdateChannelUserListener;
 public class NCMBUtil {
     private static String TAG = "NCMBUtil";
 
-    //チャンネルアイコンの拡張子
-    private static String CHANNEL_ICON_IMAGE_EXTENSION = "jpg";
+    private static NCMBUtil ourInstance;
+
+    //デフォルトの検索時 取得件数
+    private static int DEFAULT_LIMIT = 50;
+
+    public static NCMBUtil getInstance(final Context context,final String appKey,final String clientKey) {
+        ourInstance = new NCMBUtil(context, appKey, clientKey);
+        return ourInstance;
+    }
+
+    public static NCMBUtil getInstance() throws Exception {
+        if(ourInstance == null){
+            throw new Exception("ourInstance is null");
+        }
+        return ourInstance;
+    }
 
     /** コンストラクタ
      *
@@ -53,7 +66,7 @@ public class NCMBUtil {
      * @param appKey アプリケーションキー
      * @param clientKey クライアントキー
      */
-    public NCMBUtil(final Context context,final String appKey,final String clientKey){
+    private NCMBUtil(final Context context,final String appKey,final String clientKey){
         //NCMB 初期化
         NCMB.initialize(context, appKey, clientKey);
         //テスト
@@ -364,16 +377,6 @@ public class NCMBUtil {
         });
     }
 
-    /** チャンネルアイコンのファイル名生成
-     *
-     * @param channel
-     * @param extension
-     * @return
-     */
-    private String creteChannelIconName(final Channel channel,final String extension){
-        return channel.getChannelCode()+"."+extension.toLowerCase();
-    }
-
     /** チャンネルアイコン設定
      *
      * @param channel アイコンを設定するチャンネル
@@ -390,18 +393,20 @@ public class NCMBUtil {
         }
 
         //他人が作ったチャンネルはアイコン登録できない
-        if(channel.getUser().getUserName().equals(currentUser.getUserName()) == false){
+        String activeChannelUserObjID = channel.getUser().getObjectId();
+        String channelUserObjID = currentUser.getObjectId();
+        if((activeChannelUserObjID.equals(channelUserObjID)) == false){
             listener.error(new NCMBException(NCMBException.GENERIC_ERROR,"not an owner of a channel."));
             return;
         }
 
-        //アイコンイメージを保存する
-        String filename = creteChannelIconName(channel, CHANNEL_ICON_IMAGE_EXTENSION);
         //パーミッションを設定
         NCMBAcl acl = new NCMBAcl();
         acl.setPublicReadAccess(true);
         acl.setPublicWriteAccess(true);
 
+        //アイコンイメージを保存する
+        String filename = Channel.creteChannelIconName(channel.getChannelCode(), Channel.CHANNEL_ICON_IMAGE_EXTENSION);
         final NCMBFile file = new NCMBFile(filename, jpg, acl);
         file.saveInBackground(new DoneCallback() {
             @Override
@@ -419,29 +424,6 @@ public class NCMBUtil {
 
     }
 
-    /** チャンネル画像を取得
-     *
-     * @param channel
-     * @param listener
-     */
-    public void getChannelIcon(final Channel channel,final GetChannelIconImageListener listener){
-        String filename = creteChannelIconName(channel,CHANNEL_ICON_IMAGE_EXTENSION);
-        final NCMBFile file = new NCMBFile(filename);
-        file.fetchInBackground(new FetchFileCallback() {
-            @Override
-            public void done(byte[] data, NCMBException e) {
-                if (e == null) {
-                    //成功
-                    channel.setIcon(file);
-                    listener.success(channel);
-                } else {
-                    //失敗
-                    listener.error(e);
-                }
-            }
-        });
-    }
-
     /** チャンネル一覧を取得する
      *
      * @param listener
@@ -456,12 +438,25 @@ public class NCMBUtil {
      * @param listener listener
      */
     public void getChannelList(final String channelCode,final GetChannelListListener listener){
+        //最大取得件数を 50件 にしておく
+        this.getChannelList(channelCode, DEFAULT_LIMIT,listener);
+    }
+
+    /** チャンネル一覧を取得する
+     *
+     * @param channelCode 検索対象のチャンネルコード
+     * @param limit 検索結果の最大件数
+     * @param listener listener
+     */
+    public void getChannelList(final String channelCode,int limit,final GetChannelListListener listener){
         //検索
         NCMBQuery<NCMBObject> query = new NCMBQuery<>(Channel.OBJ_NAME);
         if(channelCode != null){
             //Log.d(TAG, "getChannelList channelCode " + channelCode);
             query.whereContainedIn(Channel.KEY_CHANNEL_CODE, Arrays.asList(channelCode));
         }
+        query.setLimit(limit);
+        query.addOrderByAscending("createDate");
         query.findInBackground(new FindCallback<NCMBObject>() {
             @Override
             public void done(final List<NCMBObject> list, NCMBException e) {

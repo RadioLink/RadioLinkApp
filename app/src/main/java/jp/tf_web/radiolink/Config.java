@@ -26,7 +26,7 @@ public class Config {
     //  32 kb/s bitrate.   enc_size:223  固定電話,AMラジオ
     //  12 kb/s bitrate.   enc_size: 80  3G回線
     //   8 kb/s bitrate.   enc_size: 42  携帯電話
-    public static final int OPUS_OUTPUT_BITRATE_BPS = 32*1024;
+    public static final int OPUS_OUTPUT_BITRATE_BPS = 12*1024;
 
     //ボリュームの閾値
     public static final int VOLUME_THRESHOLD = 600;
@@ -39,6 +39,9 @@ public class Config {
 
     //Google Play 課金アイテムのID
     public static final String PRODUCT_ITEM_1_ID = PrivateConfig.PRODUCT_ITEM_1_ID;
+
+    //Google Cloud Messaging の プロジェクトID
+    public static final String GOOGLE_CLOUD_MESSAGING_PROJECT_NUMBER = PrivateConfig.GOOGLE_CLOUD_MESSAGING_PROJECT_NUMBER;
 
     //Google STUN Server
     public static final String STUN_SERVER_NAME = "stun.l.google.com";
@@ -58,4 +61,7 @@ public class Config {
 
     //パケットの有効期限 [ミリ秒] 5000ミリ秒遅れたら破棄
     public static long PACKET_TIMESTAMP_EXPIRE_MSEC = 60*1000;
+
+    //起動時のチャンネルコード
+    public static final String DEFAULT_CHANNEL_CODE = "testChannel";
 }

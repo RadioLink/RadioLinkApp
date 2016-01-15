@@ -1,18 +1,20 @@
-package jp.tf_web.radiolink.ncmb.listener;
+package jp.tf_web.radiolink.ncmb.db.listener;
 
 import com.nifty.cloud.mb.core.NCMBException;
 
+import java.util.List;
+
 import jp.tf_web.radiolink.ncmb.db.Channel;
 
-/** チャンネル画像を取得
+/** チャンネル一覧 取得
  * Created by furukawanobuyuki on 2016/01/02.
  */
-public interface GetChannelIconImageListener {
+public interface GetChannelListListener {
     /**  成功
      *
-     * @param channel
+     * @param channels
      */
-    void success(Channel channel);
+    void success(List<Channel> channels);
 
     /** 失敗
      *

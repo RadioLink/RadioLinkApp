@@ -29,8 +29,8 @@ public class Channel implements NCMBObjectInterface {
     //キー名 チャンネルコード
     public static String KEY_CHANNEL_CODE = "channelCode";
 
-    //キー名 チャンネルユーザー一覧
-    public static String KEY_CHANNEL_CHANNEL_USER_LIST = "channelUserList";
+    //チャンネルアイコンの拡張子
+    public static String CHANNEL_ICON_IMAGE_EXTENSION = "jpg";
 
     private NCMBObject obj;
 
@@ -124,6 +124,16 @@ public class Channel implements NCMBObjectInterface {
         return this.channelCode;
     }
 
+    /** チャンネルアイコンのファイル名生成
+     *
+     * @param channelCode
+     * @param extension
+     * @return
+     */
+    public static String creteChannelIconName(final String channelCode,final String extension){
+        return channelCode+"."+extension.toLowerCase();
+    }
+
     /** チャンネルにアイコンを設定
      *
      * @param icon
@@ -138,7 +148,13 @@ public class Channel implements NCMBObjectInterface {
      */
     public byte[] getIcon(){
         if(this.icon == null){
-            return null;
+            String filename = creteChannelIconName(channelCode, CHANNEL_ICON_IMAGE_EXTENSION);
+            this.icon = new NCMBFile(filename);
+            try {
+                this.icon.fetch();
+            } catch (NCMBException e) {
+                //e.printStackTrace();
+            }
         }
         return this.icon.getFileData();
     }

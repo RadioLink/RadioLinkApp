@@ -45,6 +45,8 @@ public class UDPReceiver {
     //ステータス
     private Status status = Status.INITIAL;
 
+    private EventLoopGroup group;
+
     /** コンストラクタ
      *
      * @param bindIaddress ローカルアドレス
@@ -53,6 +55,7 @@ public class UDPReceiver {
      */
     public UDPReceiver(final String bindIaddress, final int bindPort,final UDPReceiverListener listener){
         Log.d(TAG,"UDPReceiver bind "+bindIaddress+":"+bindPort);
+        setStatus(Status.INITIAL);
 
         AsyncTask task = new AsyncTask<Object, Void, Void>(){
             @Override
@@ -72,10 +75,12 @@ public class UDPReceiver {
      * @param listener イベントリスナー
      */
     private void initialize(final String bindIaddress,final int bindPort,final UDPReceiverListener listener){
+        Log.d(TAG,"initialize");
+
         //受信用 アドレスとソケット情報
         this.bindSocketAddress = new InetSocketAddress(bindIaddress,bindPort);
 
-        final EventLoopGroup group = new NioEventLoopGroup();
+        group = new NioEventLoopGroup();
         udpbs = new Bootstrap();
         udpbs.group(group)
                 .channel(NioDatagramChannel.class)
@@ -87,10 +92,13 @@ public class UDPReceiver {
      *
      */
     public void close(){
+        Log.d(TAG,"close()");
         if(udpbs == null) return;
-        udpbs.clone();
+        udpbs.clone(group);
         udpbs = null;
-        setStatus(Status.INITIAL);
+
+        channel.close();
+        channel = null;
     }
 
     /** ステータスを設定する

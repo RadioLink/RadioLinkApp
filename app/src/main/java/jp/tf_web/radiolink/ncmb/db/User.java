@@ -58,7 +58,7 @@ public class User implements NCMBObjectInterface {
     }
 
     public User(final JSONObject src){
-        this(null,null);
+        this(null, null);
         try {
             String objectId = src.getString("objectId");
             this.user.setObjectId(objectId);
@@ -112,6 +112,15 @@ public class User implements NCMBObjectInterface {
         }
         //パーミッション設定
         setAcl();
+    }
+
+    /** ユーザーオブジェクトのID
+     *
+     * @return
+     */
+    public String getObjectId(){
+        if(user == null) return null;
+        return user.getObjectId();
     }
 
     /** ユーザー名を取得

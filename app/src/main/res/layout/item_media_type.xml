@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="57dp"
+    android:layout_height="52dp"
+    android:layout_gravity="left">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Speaker"
+        android:id="@+id/lblMediaType"
+        android:textColor="@color/label_color"/>
+
+    <Button
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:id="@+id/btnMedia"
+        android:background="@drawable/audio45"
+        android:layout_gravity="center_horizontal"
+        style="?android:attr/borderlessButtonStyle" />
+
+</LinearLayout>
