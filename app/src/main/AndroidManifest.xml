@@ -35,7 +35,7 @@
       android:icon="@mipmap/ic_launcher"
       android:label="@string/app_name">
 
-        <activity android:name=".HomeActivity" android:label="@string/app_name">
+        <activity android:name=".HomeActivity" android:label="@string/app_name" android:screenOrientation="portrait">
           <intent-filter>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
@@ -50,7 +50,7 @@
         </activity>
 
         <!--
-        <activity android:name=".TestActivity" android:label="@string/app_name">
+        <activity android:name=".TestActivity" android:label="@string/app_name" android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -113,7 +113,7 @@
         <meta-data android:name="openPushStartActivity" android:value=".HomeActivity"/>
 
         <!-- 通知エリアに表示されるアイコンの設定 -->
-        <meta-data android:name="smallIcon" android:resource="@drawable/icon_dummy"/>
+        <meta-data android:name="smallIcon" android:resource="@drawable/icon_green"/>
 
         <!-- 通知エリアにプッシュ通知を複数表示する設定　0:最新のみ表示 , 1:複数表示 -->
         <meta-data android:name="notificationOverlap" android:value="0"/>
