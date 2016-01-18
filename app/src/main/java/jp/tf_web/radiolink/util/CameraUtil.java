@@ -31,6 +31,9 @@ public class CameraUtil {
     //カメラで撮影した写真
     private static File captchaFile;
 
+    //カメラ画像の縮小値
+    private static final int SAMPLE_SIZE = 4;
+
     /** 画像ファイル名を生成
      *
      * @param context
@@ -74,6 +77,10 @@ public class CameraUtil {
     public static boolean onActivityResult(final Activity activity,int requestCode, int resultCode, Intent data,final CameraUtilListener listener) {
         boolean result = false;
         if(CameraUtil.requestCode == requestCode){
+            //ファイルサイズが大きすぎるので縮小する
+            BitmapFactory.Options options = new BitmapFactory.Options();
+            options.inSampleSize = SAMPLE_SIZE;
+
             Log.d(TAG, "CameraUtil requestCode:"+requestCode+" data:"+data);
             if(resultCode == Activity.RESULT_OK){
                 //写真データの取得できたのでBitmapを作成
@@ -84,10 +91,6 @@ public class CameraUtil {
                     //Log.d(TAG, "カメラで撮影");
                     if(captchaFile != null) {
                         try {
-                            //ファイルサイズが多いきすぎるので縮小する
-                            BitmapFactory.Options options = new BitmapFactory.Options();
-                            options.inSampleSize = 2;
-
                             bitmap = BitmapFactory.decodeStream(new FileInputStream(captchaFile), null, options);
                         } catch (FileNotFoundException e) {
                             e.printStackTrace();
@@ -97,9 +100,6 @@ public class CameraUtil {
                 else{
                     //Log.d(TAG, "ギャラリーから写真 選択");
                     try {
-                        BitmapFactory.Options options = new BitmapFactory.Options();
-                        options.inSampleSize = 2;
-
                         InputStream stream = activity.getContentResolver().openInputStream(data.getData());
                         bitmap = BitmapFactory.decodeStream(stream, null, options);
                         stream.close();

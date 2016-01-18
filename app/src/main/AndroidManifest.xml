@@ -102,7 +102,7 @@
             </intent-filter>
         </receiver>
         <service
-            android:name="com.nifty.cloud.mb.core.NCMBGcmListenerService"
+            android:name=".ncmb.gcm.service.GcmListenerService"
             android:exported="false">
             <intent-filter>
                 <action android:name="com.google.android.c2dm.intent.RECEIVE"/>

@@ -135,7 +135,7 @@ public class UDPService extends Service {
     @Override
     public void onDestroy() {
         super.onDestroy();
-        Toast.makeText(this, "Service has been terminated.", Toast.LENGTH_SHORT).show();
+        //Toast.makeText(this, "Service has been terminated.", Toast.LENGTH_SHORT).show();
 
         if(executor != null){
             executor.shutdownNow();

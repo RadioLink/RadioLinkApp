@@ -6,6 +6,7 @@ import com.nifty.cloud.mb.core.FetchCallback;
 import com.nifty.cloud.mb.core.NCMBAcl;
 import com.nifty.cloud.mb.core.NCMBBase;
 import com.nifty.cloud.mb.core.NCMBException;
+import com.nifty.cloud.mb.core.NCMBInstallation;
 import com.nifty.cloud.mb.core.NCMBObject;
 import com.nifty.cloud.mb.core.NCMBUser;
 
@@ -159,7 +160,6 @@ public class User implements NCMBObjectInterface {
         return this.nickName;
     }
 
-
     /** パーミッション設定
      *
      */
@@ -176,10 +176,6 @@ public class User implements NCMBObjectInterface {
      */
     @Override
     public NCMBObject toNCMBObject(){
-
-        //パーミッション設定
-        setAcl();
-
         return this.user;
     }
 }

@@ -3,7 +3,11 @@ package jp.tf_web.radiolink.util;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
 
 /**
  * Created by furukawanobuyuki on 2016/01/02.
@@ -36,8 +40,7 @@ public class BitmapUtil {
 
     }
 
-    /**
-     * バイト配列をbitmapに変換します。
+    /** バイト配列をbitmapに変換します。
      *
      * @param bytes
      * @return
@@ -46,6 +49,32 @@ public class BitmapUtil {
         Bitmap bmp = null;
         if (bytes != null) {
             bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+        }
+
+        return bmp;
+    }
+
+    /** バイト配列をbitmapに変換します。
+     *
+     * @param bytes
+     * @param sampleSize
+     * @return
+     */
+    public static Bitmap byte2bmp(byte[] bytes,int sampleSize) {
+        Bitmap bmp = null;
+        if (bytes != null) {
+            BitmapFactory.Options options = new BitmapFactory.Options();
+            options.inSampleSize = sampleSize;
+
+            try {
+                InputStream stream = new ByteArrayInputStream(bytes, 0, bytes.length);
+                bmp = BitmapFactory.decodeStream(stream, null, options);
+                stream.close();
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
 
         return bmp;

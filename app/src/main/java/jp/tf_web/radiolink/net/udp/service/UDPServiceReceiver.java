@@ -24,6 +24,8 @@ public class UDPServiceReceiver extends BroadcastReceiver {
 
     private ExecutorService executor;
 
+    private Context context;
+
     //受信イベントの通知先リスナー
     private UDPServiceListener listener;
 
@@ -41,18 +43,19 @@ public class UDPServiceReceiver extends BroadcastReceiver {
 
     /** コンストラクタ
      *
+     * @param context
      * @param listener
      */
-    public UDPServiceReceiver(UDPServiceListener listener){
+    public UDPServiceReceiver(final Context context,UDPServiceListener listener){
+        this.context = context;
         this.listener = listener;
         this.executor = Executors.newSingleThreadExecutor();
     }
 
     /** レシーバーを登録する
      *
-     * @param context
      */
-    public void registerReceiver(final Context context){
+    public void registerReceiver(){
         IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(UDPService.ACTION_NAME);
         context.registerReceiver(this, intentFilter);

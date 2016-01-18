@@ -12,7 +12,7 @@ import jp.tf_web.radiolink.bluetooth.MediaButtonReceiver;
  * Created by furukawanobuyuki on 2016/01/07.
  */
 public class MediaButtonActivity extends Activity {
-    private static String TAG = "MediaButtonActivity";
+    private static final String TAG = "MediaButtonActivity";
 
     @Override
     public void onCreate(Bundle savedInstanceState)

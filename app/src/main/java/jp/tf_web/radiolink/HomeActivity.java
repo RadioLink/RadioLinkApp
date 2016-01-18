@@ -46,6 +46,7 @@ import jp.tf_web.radiolink.bluetooth.MediaButtonReceiver;
 import jp.tf_web.radiolink.bluetooth.MediaButtonReceiverListener;
 import jp.tf_web.radiolink.controller.AudioController;
 import jp.tf_web.radiolink.controller.AudioControllerListener;
+import jp.tf_web.radiolink.ncmb.gcm.GcmSendPushListener;
 import jp.tf_web.radiolink.ncmb.gcm.GcmUtil;
 import jp.tf_web.radiolink.ncmb.gcm.GcmUtilRegistrationListener;
 import jp.tf_web.radiolink.ncmb.db.NCMBUtil;
@@ -63,6 +64,8 @@ import jp.tf_web.radiolink.ncmb.db.listener.LogoutListener;
 import jp.tf_web.radiolink.ncmb.db.listener.SetChannelIconImageListener;
 import jp.tf_web.radiolink.ncmb.db.listener.SigninListener;
 import jp.tf_web.radiolink.ncmb.db.listener.UpdateChannelUserListener;
+import jp.tf_web.radiolink.ncmb.gcm.service.GcmListenerServiceReceiver;
+import jp.tf_web.radiolink.ncmb.gcm.service.GcmListenerServiceReceiverListener;
 import jp.tf_web.radiolink.net.protocol.packet.Packet;
 import jp.tf_web.radiolink.net.udp.service.UDPService;
 import jp.tf_web.radiolink.qrcode.QRCodeUtil;
@@ -79,16 +82,13 @@ import jp.tf_web.radiolink.view.dialog.ChannelCodeDialogFragmentListener;
 
 public class HomeActivity extends Activity
 {
-    private static String TAG = "HomeActivity";
+    private static final String TAG = "HomeActivity";
 
     //ハンドラー
     private Handler handler;
 
     //メインのレイアウト
     private FrameLayout mainLayout;
-
-    //ログ表示用テキスト
-    private TextView tv;
 
     //Bluetoothヘッドセットへの接続等
     private BluetoothAudioDeviceManager bluetoothAudioDeviceManager;
@@ -129,6 +129,9 @@ public class HomeActivity extends Activity
     //購入済みアイテム
     private Purchase purchase = null;
 
+    //GCM 通知 受信
+    private GcmListenerServiceReceiver gcmListenerServiceReceiver;
+
     @Override
     public void onCreate(Bundle savedInstanceState)
     {
@@ -150,12 +153,12 @@ public class HomeActivity extends Activity
             inAppBillingUtil.setup();
         }
 
-        mainLayout = (FrameLayout) findViewById(R.id.mainLayout);
+        //GCMの通知を受信するレシーバーを有効にする
+        gcmListenerServiceReceiver = new GcmListenerServiceReceiver(getApplicationContext(),gcmListenerServiceReceiverListener);
+        gcmListenerServiceReceiver.registerReceiver();
 
-        tv = (TextView)findViewById(R.id.txtView);
-        if(tv!=null) {
-            tv.setText(R.string.app_name);
-        }
+        //メイン レイアウト
+        mainLayout = (FrameLayout) findViewById(R.id.mainLayout);
 
         //チャンネルユーザー数
         lblUserCount = (TextView)findViewById(R.id.lblUserCount);
@@ -279,36 +282,7 @@ public class HomeActivity extends Activity
 
         //カメラからデータを取得した時
         if(isResult == false) {
-            isResult = CameraUtil.onActivityResult(HomeActivity.this,requestCode,resultCode,data, new CameraUtilListener(){
-                @Override
-                public void onImage(final Bitmap bitmap) {
-                    if(bitmap == null) return;
-                    Log.d(TAG, "onImage bitmap w:"+bitmap.getWidth()+" h:"+bitmap.getHeight());
-
-                    //ChannelCodeのイメージとして保存する
-                    byte[] jpg = BitmapUtil.bmp2byteArray(bitmap, Bitmap.CompressFormat.JPEG);
-                    ncmbUtil.saveChannelIcon(activeChannel, jpg, new SetChannelIconImageListener() {
-
-                        @Override
-                        public void success(Channel channel) {
-                            Log.d(TAG,"success");
-                            //アイコンが設定されたので更新
-                            activeChannel = channel;
-
-                            //ボタンの画像を更新
-                            btnCamera.setImageBitmap(bitmap);
-                        }
-
-                        @Override
-                        public void error(NCMBException e) {
-                            e.printStackTrace();
-                            Log.e(TAG,"e:"+e.getMessage());
-                        }
-                    });
-
-                    //TODO: GCMで通知
-                }
-            });
+            isResult = CameraUtil.onActivityResult(HomeActivity.this,requestCode,resultCode,data, cameraUtilListener);
         }
 
         // 購入結果をActivityが受け取るための設定
@@ -433,7 +407,7 @@ public class HomeActivity extends Activity
                     //Log.d(TAG, "login currentUser " + currentUser + " nickName:" + currentUser.getNickName());
 
                     //ユーザ登録に成功していたら GCM デバイス登録をする
-                    GcmUtil.getInstance().registration(HomeActivity.this.gcmUtilRegistrationListener);
+                    GcmUtil.getInstance().registration(user,HomeActivity.this.gcmUtilRegistrationListener);
                 }
 
                 @Override
@@ -450,12 +424,12 @@ public class HomeActivity extends Activity
                         public void success(User user) {
                             Log.d(TAG, "signin success " + user);
 
-                            //TODO: ログイン
+                            //ログイン
                             ncmbUtil.login(new User(Build.MODEL, "password"), new LoginListener() {
                                 @Override
                                 public void success(User user) {
                                     //ユーザ登録に成功していたら GCM デバイス登録をする
-                                    GcmUtil.getInstance().registration(HomeActivity.this.gcmUtilRegistrationListener);
+                                    GcmUtil.getInstance().registration(user, HomeActivity.this.gcmUtilRegistrationListener);
                                 }
 
                                 @Override
@@ -476,7 +450,7 @@ public class HomeActivity extends Activity
         }
         else{
             //ユーザ登録に成功していたら GCM デバイス登録をする
-            GcmUtil.getInstance().registration(HomeActivity.this.gcmUtilRegistrationListener);
+            GcmUtil.getInstance().registration(currentUser,HomeActivity.this.gcmUtilRegistrationListener);
         }
     }
     //各クラスの初期化
@@ -606,7 +580,7 @@ public class HomeActivity extends Activity
             return false;
         }
 
-        //チャンネル一覧から 一番新しいチャンネルを選択する
+        //検索して見つかったチャンネルを選択
         ncmbUtil.getChannelList(channelCode,new GetChannelListListener() {
             @Override
             public void success(List<Channel> channels) {
@@ -658,7 +632,19 @@ public class HomeActivity extends Activity
                 setActiveChannel(channel);
 
                 Toast.makeText(getApplicationContext(), "JOIN!", Toast.LENGTH_SHORT).show();
-                //TODO: GCM 通知
+
+                //GCM 通知
+                GcmUtil.getInstance().channelUpdateSendPush(getApplicationContext(), activeChannel, new GcmSendPushListener() {
+                    @Override
+                    public void success() {
+                        Log.d(TAG,"GCM sendPush success");
+                    }
+
+                    @Override
+                    public void error(NCMBException e) {
+                        Log.d(TAG,"GCM sendPush error");
+                    }
+                });
             }
 
             /** 失敗
@@ -690,7 +676,18 @@ public class HomeActivity extends Activity
                 setActiveChannel( null );
                 Toast.makeText(getApplicationContext(), "EXIT!", Toast.LENGTH_SHORT).show();
 
-                //TODO: GCM 通知
+                //GCM 通知
+                GcmUtil.getInstance().channelUpdateSendPush(getApplicationContext(), activeChannel, new GcmSendPushListener() {
+                    @Override
+                    public void success() {
+                        Log.d(TAG,"GCM sendPush success");
+                    }
+
+                    @Override
+                    public void error(NCMBException e) {
+                        Log.d(TAG,"GCM sendPush error");
+                    }
+                });
             }
 
             /** 失敗
@@ -1128,6 +1125,45 @@ public class HomeActivity extends Activity
         }
     };
 
+    //カメラ,画像 取得時のリスナー
+    private CameraUtilListener cameraUtilListener = new CameraUtilListener(){
+        @Override
+        public void onImage(final Bitmap bitmap) {
+            if(bitmap == null) return;
+            Log.d(TAG, "onImage bitmap w:"+bitmap.getWidth()+" h:"+bitmap.getHeight());
+
+            //ChannelCodeのイメージとして保存する
+            byte[] jpg = BitmapUtil.bmp2byteArray(bitmap, Bitmap.CompressFormat.JPEG);
+            ncmbUtil.saveChannelIcon(activeChannel, jpg, new SetChannelIconImageListener() {
+
+                @Override
+                public void success(Channel channel) {
+                    Log.d(TAG,"success");
+                    //アイコンが設定されたので更新
+                    setActiveChannel( channel );
+                }
+
+                @Override
+                public void error(NCMBException e) {
+                    e.printStackTrace();
+                    Log.e(TAG,"e:"+e.getMessage());
+                }
+            });
+
+            //GCMで通知
+            GcmUtil.getInstance().channelUpdateSendPush(getApplicationContext(), activeChannel, new GcmSendPushListener() {
+                @Override
+                public void success() {
+                    Log.d(TAG,"GCM sendPush success");
+                }
+
+                @Override
+                public void error(NCMBException e) {
+                    Log.d(TAG,"GCM sendPush error");
+                }
+            });
+        }
+    };
 
     /** GCM デバイス登録処理のリスナー
      *
@@ -1135,15 +1171,15 @@ public class HomeActivity extends Activity
     private GcmUtilRegistrationListener gcmUtilRegistrationListener = new GcmUtilRegistrationListener(){
 
         @Override
-        public void success() {
+        public void success(final User user) {
             Log.d(TAG,"GCM Registration success.");
-            Toast.makeText(getApplicationContext(),"GCM Registration success.",Toast.LENGTH_SHORT).show();
+            //Toast.makeText(getApplicationContext(),"GCM Registration success.",Toast.LENGTH_SHORT).show();
         }
 
         @Override
         public void error(NCMBException saveErr) {
-            Log.d(TAG,"GCM Registration error.");
-            Toast.makeText(getApplicationContext(),"GCM Registration error.",Toast.LENGTH_SHORT).show();
+            Log.d(TAG, "GCM Registration error.");
+            //Toast.makeText(getApplicationContext(),"GCM Registration error.",Toast.LENGTH_SHORT).show();
         }
     };
 
@@ -1211,6 +1247,39 @@ public class HomeActivity extends Activity
                 }
 
             }
+        }
+    };
+
+    /** GCMの通知を受信するリスナー
+     *
+     */
+    private GcmListenerServiceReceiverListener gcmListenerServiceReceiverListener = new GcmListenerServiceReceiverListener(){
+
+        @Override
+        public void onUpdateChannel() {
+            //GCM通知により チャンネル情報を更新する
+            //TODO: 通知されたチャンネルと activeChannel が一致したら更新
+            Log.d(TAG, "onUpdateChannel");
+            if(activeChannel == null){
+                return;
+            }
+
+            final String channelCode = activeChannel.getChannelCode();
+            ncmbUtil.getChannelList(channelCode, new GetChannelListListener() {
+                @Override
+                public void success(List<Channel> channels) {
+                    if (channels.size() == 0) {
+                        return;
+                    }
+                    //チャンネルを更新
+                    setActiveChannel(channels.get(0));
+                }
+
+                @Override
+                public void error(NCMBException e) {
+
+                }
+            });
         }
     };
 }

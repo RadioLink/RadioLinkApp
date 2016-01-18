@@ -93,12 +93,14 @@ public class UDPReceiver {
      */
     public void close(){
         Log.d(TAG,"close()");
-        if(udpbs == null) return;
-        udpbs.clone(group);
-        udpbs = null;
-
-        channel.close();
-        channel = null;
+        if(udpbs != null) {
+            udpbs.clone(group);
+            udpbs = null;
+        }
+        if(channel != null) {
+            channel.close();
+            channel = null;
+        }
     }
 
     /** ステータスを設定する

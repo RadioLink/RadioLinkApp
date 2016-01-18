@@ -69,7 +69,7 @@ import jp.tf_web.radiolink.scheme.ShareActionUtil;
 
 public class TestActivity extends Activity
 {
-    private static String TAG = "TestActivity";
+    private static final String TAG = "TestActivity";
 
     //起動時パラメータのキー
     public static final String KEY_SHARE_ACTION_CHANNEL_CODE = "channel_code";

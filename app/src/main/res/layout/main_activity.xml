@@ -25,7 +25,8 @@
         android:layout_height="300dp"
         android:layout_gravity="center"
         android:background="@null"
-        android:src="@drawable/camera01" />
+        android:src="@drawable/camera01"
+        android:scaleType="centerCrop" />
 
     <FrameLayout
         android:layout_width="match_parent"

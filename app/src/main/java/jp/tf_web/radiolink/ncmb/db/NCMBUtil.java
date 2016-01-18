@@ -35,6 +35,7 @@ import jp.tf_web.radiolink.ncmb.db.listener.LogoutListener;
 import jp.tf_web.radiolink.ncmb.db.listener.SetChannelIconImageListener;
 import jp.tf_web.radiolink.ncmb.db.listener.SigninListener;
 import jp.tf_web.radiolink.ncmb.db.listener.UpdateChannelUserListener;
+import jp.tf_web.radiolink.ncmb.db.listener.UpdateUserListener;
 
 /** APIサーバとの処理の実装
  *

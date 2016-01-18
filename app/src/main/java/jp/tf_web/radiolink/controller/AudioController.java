@@ -120,8 +120,8 @@ public class AudioController {
 
         //UDPServiceからの受信を受け取るレシーバー
         if(udpServiceReceiver == null) {
-            udpServiceReceiver = new UDPServiceReceiver(udpServiceListener);
-            udpServiceReceiver.registerReceiver(this.context);
+            udpServiceReceiver = new UDPServiceReceiver(context,udpServiceListener);
+            udpServiceReceiver.registerReceiver();
         }
     }
 
@@ -212,6 +212,10 @@ public class AudioController {
     private void udpServiceSendByteArray(final byte[] src){
         Log.d(TAG, "udpServiceSendByteArray");
         if(activeChannel == null) return;
+        if((activeChannel.getChannelUserList() == null)||(activeChannel.getChannelUserList().size() == 0)){
+            Log.d(TAG,"activeChannel.getChannelUserList() is null");
+            return;
+        }
 
         if(publicAddr == null) {
             Log.d(TAG, "publicAddr is null");

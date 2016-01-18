@@ -16,4 +16,9 @@
 
     <string name="media_type_true">Headset</string>
     <string name="media_type_false">Speaker</string>
+
+    <!-- GCM title,message -->
+    <string name="gcm_title_channel_update">チャンネル アップデート</string>
+    <string name="gcm_message_channel_update">チャンネル が更新されました</string>
+
 </resources>
