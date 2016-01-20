@@ -849,6 +849,11 @@ public class TestActivity extends Activity
      */
     private AudioControllerListener audioControllerListener = new AudioControllerListener(){
 
+        @Override
+        public void onActive() {
+            Log.d(TAG,"AudioControllerListener onActive");
+        }
+
         /** 録音データが通知される
          *
          * @param packet 録音したデータのパケット

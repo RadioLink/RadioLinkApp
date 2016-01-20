@@ -1,5 +1,7 @@
 package jp.tf_web.radiolink.controller;
 
+import java.net.InetSocketAddress;
+
 import jp.tf_web.radiolink.net.protocol.packet.Packet;
 
 /** オーディオ,通信処理をまとめたクラスのイベントリスナー
@@ -7,6 +9,11 @@ import jp.tf_web.radiolink.net.protocol.packet.Packet;
  * Created by furukawanobuyuki on 2016/01/09.
  */
 public interface AudioControllerListener {
+
+    /** 初期化処理が完了して処理可能な状態になった事の通知
+     *
+     */
+    void onActive();
 
     /** 録音結果の通知
      *

@@ -338,6 +338,9 @@ public class AudioController {
             Log.d(TAG, "onStunBinding");
             //パブリックIP,ポートを保存
             publicAddr = publicSocketAddr;
+
+            //リスナーに通知
+            listener.onActive();
         }
 
         /** UDPServiceから届いいた メッセージを受信した場合

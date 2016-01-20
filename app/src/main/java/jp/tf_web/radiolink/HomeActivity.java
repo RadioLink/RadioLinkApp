@@ -96,6 +96,9 @@ public class HomeActivity extends Activity
     //JION中のチャンネル
     private Channel activeChannel;
 
+    //JOIN前の一時的に取得したチャンネル
+    private Channel temporaryJoinChannel;
+
     //カメラボタン
     private ImageButton btnCamera;
 
@@ -526,54 +529,14 @@ public class HomeActivity extends Activity
             return false;
         }
 
+        //start処理完了後に join 処理をする join対象のチャンネルを保持しておく
+        temporaryJoinChannel = channel;
+
         //停止
         stop();
 
         //開始
         start();
-
-        if(audioController == null){
-            Log.d(TAG,"audioController is null");
-            return false;
-        }
-
-        //チャンネルに JOIN する
-        ncmbUtil.joinChannelUser(channel, audioController.getPublicSocketAddress(), audioController.getLocalSocketAddress(), new JoinChannelUserlistener() {
-            /** 成功
-             *
-             * @param channel
-             */
-            @Override
-            public void success(final Channel channel) {
-
-                //JOINに成功
-                setActiveChannel(channel);
-
-                Toast.makeText(getApplicationContext(), "JOIN!", Toast.LENGTH_SHORT).show();
-
-                //GCM 通知
-                GcmUtil.getInstance().channelUpdateSendPush(getApplicationContext(), activeChannel, new GcmSendPushListener() {
-                    @Override
-                    public void success() {
-                        Log.d(TAG,"GCM sendPush success");
-                    }
-
-                    @Override
-                    public void error(NCMBException e) {
-                        Log.d(TAG,"GCM sendPush error");
-                    }
-                });
-            }
-
-            /** 失敗
-             *
-             * @param e
-             */
-            @Override
-            public void error(NCMBException e) {
-                Log.e(TAG, "error:" + e);
-            }
-        });
 
         return true;
     }
@@ -737,6 +700,54 @@ public class HomeActivity extends Activity
      *
      */
     private AudioControllerListener audioControllerListener = new AudioControllerListener(){
+
+        /** 初期化処理が完了して処理可能な状態になった事の通知
+         *
+         */
+        @Override
+        public void onActive(){
+            if(temporaryJoinChannel == null){
+                return;
+            }
+
+            //ここで初めて join 処理が可能
+            ncmbUtil.joinChannelUser(temporaryJoinChannel, audioController.getPublicSocketAddress(), audioController.getLocalSocketAddress(), new JoinChannelUserlistener() {
+                /** 成功
+                 *
+                 * @param channel
+                 */
+                @Override
+                public void success(final Channel channel) {
+
+                    //JOINに成功
+                    setActiveChannel(channel);
+
+                    Toast.makeText(getApplicationContext(), "JOIN!", Toast.LENGTH_SHORT).show();
+
+                    //GCM 通知
+                    GcmUtil.getInstance().channelUpdateSendPush(getApplicationContext(), activeChannel, new GcmSendPushListener() {
+                        @Override
+                        public void success() {
+                            Log.d(TAG,"GCM sendPush success");
+                        }
+
+                        @Override
+                        public void error(NCMBException e) {
+                            Log.d(TAG,"GCM sendPush error");
+                        }
+                    });
+                }
+
+                /** 失敗
+                 *
+                 * @param e
+                 */
+                @Override
+                public void error(NCMBException e) {
+                    Log.e(TAG, "error:" + e);
+                }
+            });
+        }
 
         /** 録音データが通知される
          *
