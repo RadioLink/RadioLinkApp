@@ -36,6 +36,29 @@ public class RecordManager {
     //オーディオ録音データ取得用のスレッド
     private Thread audioRecordThread;
 
+    //シングルトン
+    private static RecordManager ourInstance;
+
+    /** インスタンス取得
+     *
+     * @param context
+     * @param sampleRateInHz
+     * @param bufSize
+     * @param listener
+     * @return
+     */
+    public static RecordManager getInstance(final Context context,final int sampleRateInHz,final int bufSize,final RecordManagerListener listener) {
+        ourInstance = new RecordManager(context, sampleRateInHz, bufSize, listener);
+        return ourInstance;
+    }
+
+    public static RecordManager getInstance() throws Exception {
+        if(ourInstance == null){
+            throw new Exception("ourInstance is null");
+        }
+        return ourInstance;
+    }
+
     /** コンストラクタ
      *
      * @param context  コンテキスト
@@ -43,7 +66,7 @@ public class RecordManager {
      * @param bufSize  録音バッファーサイズ
      * @param listener 録音結果受け取りリスナー
      */
-    public RecordManager(final Context context,final int sampleRateInHz,final int bufSize,final RecordManagerListener listener){
+    private RecordManager(final Context context,final int sampleRateInHz,final int bufSize,final RecordManagerListener listener){
         this.context = context;
         this.sampleRateInHz = sampleRateInHz;
         this.bufSize = bufSize;
@@ -70,7 +93,6 @@ public class RecordManager {
                 this.bufSize);
 
         audioRecord.startRecording();
-
 
         audioRecordThread = new Thread(new Runnable(){
             @Override
@@ -103,6 +125,7 @@ public class RecordManager {
      *
      */
     public void start(){
+        Log.d(TAG, "start()");
         if(audioRecord != null){
             //開始済みなので無視
             return;
@@ -119,14 +142,13 @@ public class RecordManager {
      *
      */
     public void stop(){
-        if(audioRecord == null){
-            //停止済み
-            return;
-        }
+        Log.d(TAG, "stop()");
         if(audioRecordThread != null) {
             try {
                 isRecording = false;
+                //スレッドの終了 待ち
                 audioRecordThread.join();
+                audioRecordThread = null;
             } catch (Exception e) {
                 e.printStackTrace();
             }

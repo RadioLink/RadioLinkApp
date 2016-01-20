@@ -44,10 +44,10 @@ import jp.tf_web.radiolink.ncmb.db.listener.UpdateUserListener;
 public class NCMBUtil {
     private static String TAG = "NCMBUtil";
 
-    private static NCMBUtil ourInstance;
-
     //デフォルトの検索時 取得件数
     private static int DEFAULT_LIMIT = 50;
+
+    private static NCMBUtil ourInstance;
 
     public static NCMBUtil getInstance(final Context context,final String appKey,final String clientKey) {
         ourInstance = new NCMBUtil(context, appKey, clientKey);

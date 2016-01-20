@@ -6,7 +6,6 @@ package jp.tf_web.radiolink;
 import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.hardware.SensorEvent;
 import android.media.AudioManager;
@@ -18,22 +17,16 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
-import android.widget.CompoundButton;
-import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.ShareActionProvider;
-import android.widget.Switch;
 import android.widget.TextView;
 import android.os.Bundle;
 import android.widget.Toast;
-import android.widget.ToggleButton;
 
-import com.google.zxing.WriterException;
 import com.google.zxing.integration.android.IntentResult;
 import com.nifty.cloud.mb.core.NCMBException;
 
-import java.net.InetSocketAddress;
 import java.util.List;
 
 import jp.tf_web.radiolink.billing.InAppBillingUtil;
@@ -41,7 +34,6 @@ import jp.tf_web.radiolink.billing.InAppBillingUtilListener;
 import jp.tf_web.radiolink.billing.util.IabResult;
 import jp.tf_web.radiolink.billing.util.Inventory;
 import jp.tf_web.radiolink.billing.util.Purchase;
-import jp.tf_web.radiolink.bluetooth.BluetoothAudioDeviceManager;
 import jp.tf_web.radiolink.bluetooth.MediaButtonReceiver;
 import jp.tf_web.radiolink.bluetooth.MediaButtonReceiverListener;
 import jp.tf_web.radiolink.controller.AudioController;
@@ -51,19 +43,14 @@ import jp.tf_web.radiolink.ncmb.gcm.GcmUtil;
 import jp.tf_web.radiolink.ncmb.gcm.GcmUtilRegistrationListener;
 import jp.tf_web.radiolink.ncmb.db.NCMBUtil;
 import jp.tf_web.radiolink.ncmb.db.Channel;
-import jp.tf_web.radiolink.ncmb.db.ChannelUser;
 import jp.tf_web.radiolink.ncmb.db.User;
-import jp.tf_web.radiolink.ncmb.db.listener.CreateChannelListener;
-import jp.tf_web.radiolink.ncmb.db.listener.DeleteChannelListener;
 import jp.tf_web.radiolink.ncmb.db.listener.ExitChannelUserlistener;
 import jp.tf_web.radiolink.ncmb.db.listener.GetChannelListListener;
 import jp.tf_web.radiolink.ncmb.db.listener.GetChannelUserListListener;
 import jp.tf_web.radiolink.ncmb.db.listener.JoinChannelUserlistener;
 import jp.tf_web.radiolink.ncmb.db.listener.LoginListener;
-import jp.tf_web.radiolink.ncmb.db.listener.LogoutListener;
 import jp.tf_web.radiolink.ncmb.db.listener.SetChannelIconImageListener;
 import jp.tf_web.radiolink.ncmb.db.listener.SigninListener;
-import jp.tf_web.radiolink.ncmb.db.listener.UpdateChannelUserListener;
 import jp.tf_web.radiolink.ncmb.gcm.service.GcmListenerServiceReceiver;
 import jp.tf_web.radiolink.ncmb.gcm.service.GcmListenerServiceReceiverListener;
 import jp.tf_web.radiolink.net.protocol.packet.Packet;
@@ -77,7 +64,8 @@ import jp.tf_web.radiolink.scheme.ShareActionUtil;
 import jp.tf_web.radiolink.util.CameraUtil;
 import jp.tf_web.radiolink.util.CameraUtilListener;
 import jp.tf_web.radiolink.view.dialog.ChannelCodeDialogFragment;
-import jp.tf_web.radiolink.view.dialog.ChannelCodeDialogFragmentListener;
+import jp.tf_web.radiolink.view.dialog.DialogFragmentListener;
+import jp.tf_web.radiolink.view.dialog.JoinChannelDialogFragment;
 
 
 public class HomeActivity extends Activity
@@ -87,11 +75,8 @@ public class HomeActivity extends Activity
     //ハンドラー
     private Handler handler;
 
-    //メインのレイアウト
-    private FrameLayout mainLayout;
-
-    //Bluetoothヘッドセットへの接続等
-    private BluetoothAudioDeviceManager bluetoothAudioDeviceManager;
+    //ボリューム
+    private ImageView imgVolume;
 
     //再生,録音,通信処理をするクラス
     private AudioController audioController;
@@ -119,9 +104,6 @@ public class HomeActivity extends Activity
 
     //チャンネルコード ラベル
     private TextView lblChannelCode;
-
-    //ハンズフリー切り替えスイッチ
-    private Switch btnHandsFreeSwitch;
 
     //メディアボタン
     private Button btnMedia;
@@ -157,8 +139,8 @@ public class HomeActivity extends Activity
         gcmListenerServiceReceiver = new GcmListenerServiceReceiver(getApplicationContext(),gcmListenerServiceReceiverListener);
         gcmListenerServiceReceiver.registerReceiver();
 
-        //メイン レイアウト
-        mainLayout = (FrameLayout) findViewById(R.id.mainLayout);
+        //録音 音量 表示欄
+        imgVolume = (ImageView) findViewById(R.id.imgVolume);
 
         //チャンネルユーザー数
         lblUserCount = (TextView)findViewById(R.id.lblUserCount);
@@ -171,63 +153,9 @@ public class HomeActivity extends Activity
         btnCamera = (ImageButton) findViewById(R.id.btnCamera);
         btnCamera.setOnClickListener(this.btnCameraOnClickListener);
 
-        //ハンズフリー切り替えスイッチ
-        btnHandsFreeSwitch = (Switch) findViewById(R.id.btnHandsFreeSwitch);
-        btnHandsFreeSwitch.setOnCheckedChangeListener(btnHandsFreeSwitchOnCheckedChangeListener);
-
         //メディア切り替えボタン
         btnMedia = (Button)findViewById(R.id.btnMedia);
         btnMedia.setOnClickListener(btnMediaOnClickListener);
-
-/*
-        //開始
-        Button btnStart = (Button) findViewById(R.id.btnStart);
-        btnStart.setOnClickListener(this.btnStartOnClickListener);
-
-        //停止
-        Button btnStop = (Button) findViewById(R.id.btnStop);
-        btnStop.setOnClickListener(this.btnStopOnClickListener);
-
-        //Channelに入る
-        Button btnChannelJoin = (Button) findViewById(R.id.btnChannelJoin);
-        btnChannelJoin.setOnClickListener(this.btnChannelJoinOnClickListener);
-
-        //Channelから出る
-        Button btnChannelExit = (Button) findViewById(R.id.btnChannelExit);
-        btnChannelExit.setOnClickListener(this.btnChannelExitOnClickListener);
-
-        //アイテム購入ボタン
-        Button btnInAppBilling = (Button)findViewById(R.id.btnInAppBilling);
-        btnInAppBilling.setOnClickListener(this.btnInAppBillingOnClickListener);
-
-        //ユーザー作成
-        Button btnSignin = (Button)findViewById(R.id.btnSignin);
-        btnSignin.setOnClickListener(this.btnSigninOnClickListener);
-
-        //ユーザー作成
-        Button btnLogin = (Button)findViewById(R.id.btnLogin);
-        btnLogin.setOnClickListener(this.btnLoginOnClickListener);
-
-        //ユーザー作成
-        Button btnLogout = (Button)findViewById(R.id.btnLogout);
-        btnLogout.setOnClickListener(this.btnLogoutOnClickListener);
-
-        //チャンネル作成
-        Button btnNewChannel = (Button)findViewById(R.id.btnNewChannel);
-        btnNewChannel.setOnClickListener(this.btnNewChannelOnClickListener);
-
-        //チャンネルアイコン設定
-        Button btnGetChannelList = (Button)findViewById(R.id.btnGetChannelList);
-        btnGetChannelList.setOnClickListener(this.btnGetChannelListOnClickListener);
-
-        //チャンネル削除
-        Button btnDeleteChannel = (Button)findViewById(R.id.btnDeleteChannel);
-        btnDeleteChannel.setOnClickListener(this.btnDeleteChannelOnClickListener);
-
-        //QRコードスキャン ボタン
-        Button btnQRCodeScan = (Button)findViewById(R.id.btnQRCodeScan);
-        btnQRCodeScan.setOnClickListener(this.btnQRCodeScanOnClickListener);
-*/
 
         //起動時のサインイン,ログイン処理
         login();
@@ -244,6 +172,8 @@ public class HomeActivity extends Activity
         boolean result = false;
 
         String action = getIntent().getAction();
+        Log.d(TAG, "action:"+action);
+
         //SCHEME起動された場合 チャンネルコードを取得する
         if (Intent.ACTION_VIEW.equals(action)) {
             Uri uri = getIntent().getData();
@@ -251,29 +181,29 @@ public class HomeActivity extends Activity
                 Log.d(TAG, "uri " + uri.toString());
                 final String channelCode = uri.getQueryParameter(ShareActionUtil.KEY_VALUE_SHARE_CHANNEL_CODE);
                 Log.d(TAG, "channelCode " + channelCode);
-                Toast.makeText(getApplicationContext(),"channelCode:"+channelCode,Toast.LENGTH_SHORT).show();
+                //Toast.makeText(getApplicationContext(),"channelCode:"+channelCode,Toast.LENGTH_SHORT).show();
 
                 result = true;
 
-                //チャンネルコードで チャンネルを検索して取得
-                ncmbUtil.getChannelList(channelCode, new GetChannelListListener() {
-                    @Override
-                    public void success(List<Channel> channels) {
-                        if(channels.size() != 0){
-                            //TODO: ここでアクティブなチャンネルを直接設定せずに ユーザーに JOIN するか確認するダイアログ等を表示する
-                            joinChannel(channels.get(0));
-                        }
-                    }
-
-                    @Override
-                    public void error(NCMBException e) {
-
-                    }
-                });
-
+                //JOIN 確認ダイアログを表示する
+                showJoinChannelConfirm(channelCode);
             }
         }
         return result;
+    }
+
+    /** 起動済みでスキーム起動された場合
+     *
+     * @param intent
+     */
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        Log.d(TAG, "onNewIntent()");
+        //起動時のインテントを設定する
+        setIntent(intent);
+        //起動時パラメータを取得
+        onAction();
     }
 
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -334,7 +264,6 @@ public class HomeActivity extends Activity
      */
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_main, menu);
 
         // ShareActionProvider の設定
@@ -361,8 +290,12 @@ public class HomeActivity extends Activity
      * @param channel
      */
     private void setActiveChannel(Channel channel){
+
         this.activeChannel = channel;
         this.audioController.setActiveChannel(channel);
+
+        // ShareActionProviderのチャンネルコードを更新 インテントの設定
+        ShareActionUtil.getInstance().setShareIntent(getApplicationContext(), channel.getChannelCode());
 
         //チャンネルコードを画面に表示
         this.lblChannelCode.setText("");
@@ -461,11 +394,6 @@ public class HomeActivity extends Activity
             audioController = new AudioController(getApplicationContext(), Config.SAMPLE_RATE_IN_HZ, Config.OPUS_FRAME_SIZE * 2, audioControllerListener);
         }
 
-        //Bluetoothヘッドセットを利用する
-        if(bluetoothAudioDeviceManager == null) {
-            bluetoothAudioDeviceManager = new BluetoothAudioDeviceManager(getApplicationContext());
-        }
-
         //照度センサーを初期化
         if(lightSensorManager == null) {
             lightSensorManager = new LightSensorManager(getApplicationContext(), lightSensorManagerListener);
@@ -477,9 +405,6 @@ public class HomeActivity extends Activity
 
         //各クラスの初期化
         initialize();
-
-        //Bluetoothヘッドセットがあればそれを使う
-        bluetoothAudioDeviceManager.startVoiceRecognition();
 
         //MEDIA_BUTTON イベントを受信する
         mediaButtonReceiver = new MediaButtonReceiver(getApplicationContext(), mediaButtonReceiverListener);
@@ -497,21 +422,19 @@ public class HomeActivity extends Activity
         //録音 停止
         if(audioController != null) {
             audioController.stop();
+            audioController = null;
         }
 
         //MEDIA_BUTTON イベントを受信する事を止める
         if(mediaButtonReceiver != null) {
             mediaButtonReceiver.unregisterReceiver();
-        }
-
-        //Bluetoothヘッドセットから切断
-        if(bluetoothAudioDeviceManager != null) {
-            bluetoothAudioDeviceManager.stopVoiceRecognition();
+            mediaButtonReceiver = null;
         }
 
         //照度センサーを利用 停止
         if(lightSensorManager != null) {
             lightSensorManager.stop();
+            lightSensorManager = null;
         }
 
         //UDPサービス STOP
@@ -553,15 +476,9 @@ public class HomeActivity extends Activity
 
         @Override
         public void onClick(View v) {
-            // 一度 停止
-            stop();
-
-            // 開始
-            start();
-
             //チャンネルコード入力ダイアログを表示する
-            ChannelCodeDialogFragment exampleDialogFragment = new ChannelCodeDialogFragment().setListener(channelCodeDialogFragmentListener);
-            exampleDialogFragment.show(getFragmentManager(), ChannelCodeDialogFragment.class.getSimpleName());
+            ChannelCodeDialogFragment dialogFragment = new ChannelCodeDialogFragment().setListener(channelCodeDialogFragmentListener);
+            dialogFragment.show(getFragmentManager(), ChannelCodeDialogFragment.class.getSimpleName());
         }
     };
 
@@ -570,13 +487,9 @@ public class HomeActivity extends Activity
      * @param channelCode チャンネルコード
      */
     private boolean joinChannel(final String channelCode){
-        Log.d(TAG,"joinChannel");
+        Log.d(TAG,"joinChannel(channelCode)");
         if(channelCode == null){
             Log.d(TAG,"channelCode is null");
-            return false;
-        }
-        if(audioController == null){
-            Log.d(TAG,"audioController is null");
             return false;
         }
 
@@ -607,18 +520,22 @@ public class HomeActivity extends Activity
      * @param channel チャンネル
      */
     private boolean joinChannel(final Channel channel){
-        Log.d(TAG,"joinChannel");
+        Log.d(TAG,"joinChannel(channel)");
         if(channel == null){
             Log.d(TAG,"channel is null");
             return false;
         }
+
+        //停止
+        stop();
+
+        //開始
+        start();
+
         if(audioController == null){
             Log.d(TAG,"audioController is null");
             return false;
         }
-
-        // ShareActionProviderのチャンネルコードを更新 インテントの設定
-        ShareActionUtil.getInstance().setShareIntent(getApplicationContext(), channel.getChannelCode());
 
         //チャンネルに JOIN する
         ncmbUtil.joinChannelUser(channel, audioController.getPublicSocketAddress(), audioController.getLocalSocketAddress(), new JoinChannelUserlistener() {
@@ -628,6 +545,7 @@ public class HomeActivity extends Activity
              */
             @Override
             public void success(final Channel channel) {
+
                 //JOINに成功
                 setActiveChannel(channel);
 
@@ -702,295 +620,15 @@ public class HomeActivity extends Activity
 
     }
 
-    //Channel Exit ボタンクリック時
-    private View.OnClickListener btnChannelExitOnClickListener = new View.OnClickListener() {
-        @Override
-        public void onClick(View v) {
-            //ログイン中のチャンネルからEXIT
-            exitChannel(activeChannel);
-        }
-    };
-
-    //購入ボタン クリック時
-    private View.OnClickListener btnInAppBillingOnClickListener = new View.OnClickListener() {
-        @Override
-        public void onClick(View v) {
-            //購入処理
-            if(inAppBillingUtil == null) return;
-            inAppBillingUtil.onBuyButtonClicked(HomeActivity.this,Config.PRODUCT_ITEM_1_ID);
-        }
-    };
-
-    //Signin ボタンクリック時
-    private View.OnClickListener btnSigninOnClickListener = new View.OnClickListener(){
-
-        @Override
-        public void onClick(View v) {
-            String name = Build.MODEL;
-            String password = "password";
-            String nickname = Build.DEVICE;
-
-            User user = new User(name, password);
-            user.setNickName(nickname);
-
-            //ユーザー登録
-            ncmbUtil.signin(user, new SigninListener() {
-                @Override
-                public void success(User user) {
-                    Log.d(TAG, "signin success " + user);
-                }
-
-                @Override
-                public void error(NCMBException e) {
-                    Log.e(TAG, "signin error " + e);
-                }
-            });
-        }
-    };
-
-    /** ログイン
-     *
-     * @param name
-     * @param password
-     */
-    private void login(final String name,final String password){
-        ncmbUtil.login(new User(name, password), new LoginListener() {
-            @Override
-            public void success(User user) {
-                Log.d(TAG, "login success " + user);
-                //TODO: ログイン中のユーザーを取得してみる
-                User currentUser = ncmbUtil.getCurrentUser();
-                Log.d(TAG, "login currentUser " + currentUser + " nickName:" + currentUser.getNickName());
-            }
-
-            @Override
-            public void error(NCMBException e) {
-                Log.e(TAG, "login error " + e);
-            }
-        });
-    }
-
-    //Login ボタンクリック時
-    private View.OnClickListener btnLoginOnClickListener = new View.OnClickListener(){
-
-        @Override
-        public void onClick(View v) {
-            ncmbUtil.login(new User(Build.MODEL, "password"), new LoginListener() {
-                @Override
-                public void success(User user) {
-                    Log.d(TAG, "login success " + user);
-                    //TODO: ログイン中のユーザーを取得してみる
-                    User currentUser = ncmbUtil.getCurrentUser();
-                    Log.d(TAG, "login currentUser " + currentUser + " nickName:" + currentUser.getNickName());
-                }
-
-                @Override
-                public void error(NCMBException e) {
-                    Log.e(TAG, "login error " + e);
-                }
-            });
-        }
-    };
-
-    //Logout ボタンクリック時
-    private View.OnClickListener btnLogoutOnClickListener = new View.OnClickListener(){
-
-        @Override
-        public void onClick(View v) {
-            ncmbUtil.logout(new LogoutListener() {
-                @Override
-                public void success() {
-                    Log.d(TAG, "logout success");
-
-                    User currentUser = ncmbUtil.getCurrentUser();
-                    Log.d(TAG, "logout currentUser " + currentUser);
-                }
-
-                @Override
-                public void error(NCMBException e) {
-                    Log.e(TAG, "logout error " + e);
-                }
-            });
-        }
-    };
-
-
-    //チャンネル作成
-    private View.OnClickListener btnNewChannelOnClickListener = new View.OnClickListener(){
-        @Override
-        public void onClick(View v) {
-            String channelCode = Config.DEFAULT_CHANNEL_CODE;
-            ncmbUtil.createChannel(channelCode, new CreateChannelListener() {
-                @Override
-                public void success(Channel channel) {
-                    Log.d(TAG, "createChannel success " + channel.getChannelCode());
-
-                    //Channel アイコン設定
-                    Bitmap bmp = BitmapFactory.decodeResource(getResources(), R.drawable.dummy);
-                    byte[] data = BitmapUtil.bmp2byteArray(bmp, Bitmap.CompressFormat.JPEG);
-                    String extension = Bitmap.CompressFormat.JPEG.name();
-                    Log.d(TAG, "data size:" + data.length + " extension:" + extension);
-
-                    ncmbUtil.saveChannelIcon(channel, data, new SetChannelIconImageListener() {
-                        @Override
-                        public void success(Channel channel) {
-                            Log.d(TAG, "saveChannelIcon success size:" + channel.getIcon().length);
-                        }
-
-                        @Override
-                        public void error(NCMBException e) {
-                            Log.e(TAG, "saveChannelIcon error " + e);
-                        }
-                    });
-                }
-
-                @Override
-                public void error(NCMBException e) {
-                    Log.e(TAG, "createChannel error " + e);
-                }
-            });
-        }
-    };
-
-    //チャンネル一覧取得
-    private View.OnClickListener btnGetChannelListOnClickListener = new View.OnClickListener(){
-        @Override
-        public void onClick(View v) {
-
-            ncmbUtil.getChannelList(new GetChannelListListener() {
-                @Override
-                public void success(List<Channel> channels) {
-                    Log.d(TAG, "getChannelList success size:" + channels.size());
-                    if (channels.size() == 0) return;
-
-                    //チャンネルユーザーを追加
-                    final Channel c = channels.get(0);
-
-                    //ログイン中のユーザーを取得
-                    final User currentUser = ncmbUtil.getCurrentUser();
-                    Log.d(TAG, "currentUser:" + currentUser);
-
-                    //チャンネルユーザー一覧を取得
-                    ncmbUtil.getChannelUserList(c, new GetChannelUserListListener() {
-                        @Override
-                        public void success(final Channel channel) {
-                            Log.d(TAG, "getChannelUserList success size:" + channel.getChannelUserList().size());
-
-                            if (channel.getUser().getUserName() == null) {
-                                Log.e(TAG, "channel.getUser().getUserName() is null");
-                                return;
-                            }
-                            Log.d(TAG, "channel user:" + channel.getUser().getUserName());
-
-                            {
-                                InetSocketAddress publicAddr = new InetSocketAddress("192.168.0.1", 9999);
-                                InetSocketAddress localAddr = new InetSocketAddress("127.0.0.1", 8080);
-                                ChannelUser cu1 = new ChannelUser(channel, currentUser, publicAddr, localAddr);
-                                Log.d(TAG, "cu1 user:" + cu1.channel.getUser());
-                                channel.addChannelUser(cu1);
-                            }
-                            {
-                                InetSocketAddress publicAddr = new InetSocketAddress("192.168.0.2", 9999);
-                                InetSocketAddress localAddr = new InetSocketAddress("127.0.0.1", 8080);
-                                ChannelUser cu2 = new ChannelUser(channel, currentUser, publicAddr, localAddr);
-                                Log.d(TAG, "cu2 user:" + cu2.channel.getUser());
-                                channel.addChannelUser(cu2);
-                            }
-                            //チャンネルユーザー一覧を更新
-                            ncmbUtil.updateChannelUserList(channel, new UpdateChannelUserListener() {
-                                @Override
-                                public void success(Channel channel) {
-                                    Log.d(TAG, "updateChannelUserList success");
-
-                                    //チャンネルユーザー一覧を取得
-                                    ncmbUtil.getChannelUserList(channel, new GetChannelUserListListener() {
-                                        @Override
-                                        public void success(final Channel channel) {
-                                            Log.d(TAG, "getChannelUserList success size:" + channel.getChannelUserList().size());
-                                        }
-
-                                        @Override
-                                        public void error(NCMBException e) {
-                                            Log.e(TAG, "getChannelUserList error " + e);
-                                        }
-                                    });
-                                }
-
-                                @Override
-                                public void error(NCMBException e) {
-                                    Log.e(TAG, "updateChannelUserList error " + e);
-                                }
-                            });
-                        }
-
-                        @Override
-                        public void error(NCMBException e) {
-                            Log.e(TAG, "getChannelUserList error " + e);
-                        }
-                    });
-                }
-
-                @Override
-                public void error(NCMBException e) {
-                    Log.e(TAG, "getChannelList error " + e);
-                }
-            });
-        }
-    };
-
-    //チャンネル削除
-    private View.OnClickListener btnDeleteChannelOnClickListener = new View.OnClickListener(){
-        @Override
-        public void onClick(View v) {
-            String channelCode = Config.DEFAULT_CHANNEL_CODE;
-            ncmbUtil.deleteChannel(channelCode, new DeleteChannelListener() {
-                @Override
-                public void success() {
-                    Log.d(TAG, "deleteChannel success");
-                }
-
-                @Override
-                public void error(NCMBException e) {
-                    Log.e(TAG, "deleteChannel error " + e);
-                }
-            });
-        }
-    };
-
-    //QRコード ボタン
-    private View.OnClickListener btnQRCodeScanOnClickListener = new View.OnClickListener() {
-        @Override
-        public void onClick(View v) {
-            if(activeChannel == null) {
-                Log.d(TAG,"activeChannel is null");
-                return;
-            }
-
-            try {
-                //QRコード生成
-                Bitmap qrImg = QRCodeUtil.createQRCodeByZxing(activeChannel.getChannelCode(), 300);
-                //QRコードを画面に表示
-                ImageView imgQRcode = (ImageView) findViewById(R.id.imgQRcode);
-                imgQRcode.setImageBitmap(qrImg);
-            } catch (WriterException e) {
-                e.printStackTrace();
-            }
-
-            //QRコードを読み込む
-            QRCodeUtil.scanQRCode(HomeActivity.this);
-        }
-    };
-
-
     /** 画面の背景色を設定
      *
      * @param color
      */
-    private void setBackgroundColor(final int color){
+    private void setVolumeBackgroundColor(final int color){
         handler.post(new Runnable() {
             @Override
             public void run() {
-                mainLayout.setBackgroundColor(color);
+                imgVolume.setBackgroundColor(color);
             }
         });
     }
@@ -1020,12 +658,13 @@ public class HomeActivity extends Activity
             //Log.d(TAG, "onLightSensorChanged value:" + value);
             if(value < Config.LIGHT_SENSOR_THRESHOLD){
                 //照度センサーの閾値 判定
-                //TODO: 画面の操作を停止する等を行う
-                //仮で非表示にする
-                mainLayout.setVisibility(View.INVISIBLE);
+                //画面の操作を停止する
+                btnCamera.setEnabled(false);
+                lblChannelCode.setEnabled(false);
             }
             else{
-                mainLayout.setVisibility(View.VISIBLE);
+                btnCamera.setEnabled(true);
+                lblChannelCode.setEnabled(true);
             }
         }
     };
@@ -1108,11 +747,11 @@ public class HomeActivity extends Activity
         public void onAudioRecord(final Packet packet, short volume) {
             //volume閾値で画面を更新
             if(volume < Config.VOLUME_THRESHOLD){
-                //仮で背景色を設定
-                setBackgroundColor(Color.RED);
+                //背景色を設定
+                setVolumeBackgroundColor(Color.TRANSPARENT);
                 return;
             }
-            setBackgroundColor(Color.GREEN);
+            setVolumeBackgroundColor(Color.RED);
         }
 
         /** データを受信した時通知される
@@ -1138,15 +777,15 @@ public class HomeActivity extends Activity
 
                 @Override
                 public void success(Channel channel) {
-                    Log.d(TAG,"success");
+                    Log.d(TAG, "success");
                     //アイコンが設定されたので更新
-                    setActiveChannel( channel );
+                    setActiveChannel(channel);
                 }
 
                 @Override
                 public void error(NCMBException e) {
                     e.printStackTrace();
-                    Log.e(TAG,"e:"+e.getMessage());
+                    Log.e(TAG, "e:" + e.getMessage());
                 }
             });
 
@@ -1187,7 +826,7 @@ public class HomeActivity extends Activity
     /** チャンネルコード入力 ダイアログのリスナー
      *
      */
-    private ChannelCodeDialogFragmentListener channelCodeDialogFragmentListener = new ChannelCodeDialogFragmentListener(){
+    private DialogFragmentListener channelCodeDialogFragmentListener = new DialogFragmentListener(){
 
         @Override
         public void ok(Bundle params) {
@@ -1205,17 +844,6 @@ public class HomeActivity extends Activity
         public void cancel(Bundle params) {
             //キャンセルされた
 
-        }
-    };
-
-    //ハンズフリー切り替えスイッチ
-    private CompoundButton.OnCheckedChangeListener btnHandsFreeSwitchOnCheckedChangeListener = new CompoundButton.OnCheckedChangeListener(){
-
-        @Override
-        public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-            String c = (isChecked)?"YES":"NO";
-            Log.d(TAG,"onCheckedChanged isChecked:"+c);
-            //TODO: VADのON,OFF
         }
     };
 
@@ -1282,4 +910,52 @@ public class HomeActivity extends Activity
             });
         }
     };
+
+    /** JOIN 確認ダイアログを表示
+     *
+     * @param channelCode
+     */
+    private void showJoinChannelConfirm(final String channelCode){
+
+        //チャンネルコードで チャンネルを検索して取得
+        ncmbUtil.getChannelList(channelCode, new GetChannelListListener() {
+            @Override
+            public void success(List<Channel> channels) {
+                Log.d(TAG, "channels size:" + channels.size());
+                if (channels.size() == 0) {
+                    //チャンネルが見つからなかった場合
+                    String message = getString(R.string.channel_not_found);
+                    Toast.makeText(getApplicationContext(),message,Toast.LENGTH_SHORT);
+                    return;
+                }
+
+                final Channel channel = channels.get(0);
+
+                //JOIN 確認ダイアログ
+                JoinChannelDialogFragment dialogFragment = new JoinChannelDialogFragment();
+                dialogFragment.setChannelCode( channel.getChannelCode());
+                dialogFragment.setListener(new DialogFragmentListener() {
+                    @Override
+                    public void ok(Bundle params) {
+                        //JOIN 処理をする
+                        joinChannel(channel);
+                    }
+
+                    @Override
+                    public void cancel(Bundle params) {
+
+                    }
+                });
+                dialogFragment.show(getFragmentManager(), JoinChannelDialogFragment.class.getSimpleName());
+            }
+
+            @Override
+            public void error(NCMBException e) {
+                //チャンネルが見つからなかった場合
+                String message = getString(R.string.channel_not_found);
+                Toast.makeText(getApplicationContext(),message,Toast.LENGTH_SHORT);
+            }
+        });
+
+    }
 }

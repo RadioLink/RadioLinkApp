@@ -6,7 +6,7 @@ import android.os.Bundle;
  *
  * Created by furukawanobuyuki on 2016/01/15.
  */
-public interface ChannelCodeDialogFragmentListener {
+public interface DialogFragmentListener {
 
     /** OKボタンクリック時
      *

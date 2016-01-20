@@ -4,7 +4,10 @@ import android.app.Dialog;
 import android.app.DialogFragment;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
+import android.support.v7.view.ContextThemeWrapper;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
@@ -18,6 +21,7 @@ import android.widget.Toast;
 
 import com.nifty.cloud.mb.core.NCMBException;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import jp.tf_web.radiolink.Config;
@@ -39,11 +43,14 @@ public class ChannelCodeDialogFragment extends DialogFragment {
 
     public static final String KEY_CHANNEL_CODE = "channel_code";
 
+    //ハンドラー
+    private Handler handler;
+
     //API処理をするユーテリティ
     private NCMBUtil ncmbUtil;
 
     //イベント通知先
-    private ChannelCodeDialogFragmentListener listener;
+    private DialogFragmentListener listener;
 
     //チャンネルコード入力欄
     private EditText txtChannelCode;
@@ -52,14 +59,16 @@ public class ChannelCodeDialogFragment extends DialogFragment {
     private ListView listChannel;
 
     //チャンネルアダプター
-    private ArrayAdapter<String> listChannelAdapter;
+    private ChannelCodeDialogListArrayAdapter listChannelAdapter;
 
     /** リスナーを設定
      *
      * @param listener
      */
-    public ChannelCodeDialogFragment setListener(final ChannelCodeDialogFragmentListener listener){
+    public ChannelCodeDialogFragment setListener(final DialogFragmentListener listener){
         this.listener = listener;
+        this.handler = new Handler();
+
         return this;
     }
 
@@ -70,7 +79,7 @@ public class ChannelCodeDialogFragment extends DialogFragment {
      */
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {
-        Dialog dialog = new Dialog(getActivity());
+        Dialog dialog = new Dialog(new ContextThemeWrapper(getActivity(), R.style.AppDialogTheme));
         dialog.setContentView(R.layout.channel_code_dialog_fragment);
         dialog.setTitle(R.string.channel_code_dialog_title);
         dialog.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
@@ -89,7 +98,8 @@ public class ChannelCodeDialogFragment extends DialogFragment {
         //チャンネル一覧
         this.listChannel = (ListView) dialog.findViewById(R.id.listChannel);
         this.listChannel.setOnItemClickListener(listChannelOnItemClickListener);
-        this.listChannelAdapter = new ArrayAdapter<String>(getActivity().getApplicationContext(), android.R.layout.simple_list_item_1);
+
+        this.listChannelAdapter = new ChannelCodeDialogListArrayAdapter(getActivity().getApplicationContext());
         this.listChannel.setAdapter(this.listChannelAdapter);
 
         try {
@@ -97,6 +107,10 @@ public class ChannelCodeDialogFragment extends DialogFragment {
         } catch (Exception e) {
             e.printStackTrace();
         }
+
+        //TODO: 過去にJOINしたことのあるチャンネル一覧を取得して一覧に設定する
+        //List<Channel> channels = new ArrayList<>();
+
         return dialog;
     }
 
@@ -162,55 +176,85 @@ public class ChannelCodeDialogFragment extends DialogFragment {
         @Override
         public void afterTextChanged(Editable s) {
             //ここで入力値に応じたチャンネル一覧を検索して表示する
-            final String searchChannelCode = s.toString();
-            Log.d(TAG,"searchChannelCode:"+searchChannelCode);
+            final String channelCode = s.toString();
+            Log.d(TAG, "searchChannelCode:" + channelCode);
 
-            //リストを初期化
-            listChannelAdapter.clear();
-            listChannelAdapter.notifyDataSetChanged();
-
-            //最新 100件 を取得する
-            ncmbUtil.getChannelList(null, 100, new GetChannelListListener(){
-
-                @Override
-                public void success(List<Channel> channels) {
-                    // チャンネル一覧にアイテムを追加します
-                    if(channels.size() == 0){
-                        //何もしない
-                        return;
-                    }
-                    Log.d(TAG,"channels size:"+channels.size());
-                    //一覧元のデータを更新
-                    listChannelAdapter.clear();
-                    for(Channel c:channels) {
-                        if(c.getChannelCode().indexOf(searchChannelCode) != -1) {
-                            //チャンネルコードのカスタムリストを作る
-                            listChannelAdapter.add(c.getChannelCode());
-                        }
-                    }
-                    //更新を通知
-                    listChannelAdapter.notifyDataSetChanged();
-                }
-
-                @Override
-                public void error(NCMBException e) {
-                    //何もしない
-                    Log.d(TAG,"e:"+e.getMessage());
-                }
-            });
-
+            searchChannelCode(channelCode);
         }
     };
+
+    /** 非同期でチャンネルコードで検索して一覧を更新
+     *
+     * @param channelCode
+     */
+    private void searchChannelCode(final String channelCode){
+        final AsyncTask<String, Void, Void> searchTask = new AsyncTask<String, Void, Void>() {
+            @Override
+            protected Void doInBackground(String... params) {
+                final String channelCode = params[0];
+                handler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        //チャンネルコードで検索して一覧を更新
+                        getChannelList(channelCode);
+                    }
+                });
+                return null;
+            }
+        };
+        searchTask.execute(channelCode);
+    }
+
+    /** チャンネルコードで検索して一覧を更新
+     *
+     * @param channelCode
+     */
+    private void getChannelList(final String channelCode){
+        //リストを初期化
+        listChannelAdapter.clear();
+
+        //最新 100件 を取得する
+        //TODO: 過去に作成されたチャンネルが検索対象にならないので何か処理方法を考える
+        ncmbUtil.getChannelList(null, 100, new GetChannelListListener() {
+
+            @Override
+            public void success(final List<Channel> channels) {
+                // チャンネル一覧にアイテムを追加します
+                if (channels.size() == 0) {
+                    //何もしない
+                    return;
+                }
+                Log.d(TAG, "channels size:" + channels.size());
+
+                //一覧元のデータを更新
+                listChannelAdapter.clear();
+                for(Channel c:channels) {
+                    if(c.getChannelCode().indexOf(channelCode) != -1) {
+                        //チャンネルコードのカスタムリストを作る
+                        listChannelAdapter.add(c);
+                    }
+                }
+            }
+
+            @Override
+            public void error(NCMBException e) {
+                //何もしない
+                Log.d(TAG, "e:" + e.getMessage());
+            }
+        });
+    }
 
     //チャンネルリスト選択時のイベント
     private AdapterView.OnItemClickListener listChannelOnItemClickListener = new AdapterView.OnItemClickListener() {
         @Override
         public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
             ListView listView = (ListView) parent;
+
             //クリックされたアイテムを取得して チャンネルコードを入力
-            String item = (String) listView.getItemAtPosition(position);
-            txtChannelCode.setText(item);
-            Toast.makeText(getActivity().getApplicationContext(), item, Toast.LENGTH_SHORT).show();
+            Channel channel = (Channel) listView.getItemAtPosition(position);
+            txtChannelCode.setText(channel.getChannelCode());
+
+            //Toast.makeText(getActivity().getApplicationContext(), channel.getChannelCode(), Toast.LENGTH_SHORT).show();
         }
     };
 
@@ -235,6 +279,15 @@ public class ChannelCodeDialogFragment extends DialogFragment {
                 }
                 else{
                     //新規作成
+
+                    //チャンネルコードの長さを確認
+                    if(Config.CHANNEL_CODE_MINI_LENGTH >= channelCode.length()){
+                        String message = getString(R.string.channel_code_mini_length);
+                        message = message.replace("{{LENGTH}}",String.valueOf(Config.CHANNEL_CODE_MINI_LENGTH));
+                        Toast.makeText(getActivity().getApplicationContext(), message,Toast.LENGTH_LONG).show();
+                        return;
+                    }
+
                     createChannel(channelCode);
                 }
             }
@@ -280,4 +333,5 @@ public class ChannelCodeDialogFragment extends DialogFragment {
             Toast.makeText(getActivity().getApplicationContext(),"Channel作成に失敗しました。",Toast.LENGTH_SHORT).show();
         }
     }
+
 }

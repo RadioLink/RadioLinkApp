@@ -24,10 +24,10 @@ import jp.tf_web.radiolink.ncmb.gcm.GcmUtil;
 public class GcmListenerService extends NCMBGcmListenerService {
     private static final String TAG = "GcmListenerService";
 
+    public static final String ACTION_NAME = "ACTION_GCM_ON_RECEIVE";
+
     //プッシュに設定するアクション
     public static final String CMD_CHANNEL_UPDATE = "CMD_CHANNEL_UPDATE";
-
-    public static final String ACTION_NAME = "ACTION_GCM_ON_RECEIVE";
 
     public static final String KEY_NAME_CMD = "cmd";
 

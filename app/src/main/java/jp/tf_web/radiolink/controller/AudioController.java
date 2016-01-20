@@ -18,6 +18,7 @@ import jp.tf_web.radiolink.audio.OpusManager;
 import jp.tf_web.radiolink.audio.RecordManager;
 import jp.tf_web.radiolink.audio.RecordManagerListener;
 import jp.tf_web.radiolink.audio.TrackManager;
+import jp.tf_web.radiolink.bluetooth.BluetoothAudioDeviceManager;
 import jp.tf_web.radiolink.ncmb.db.Channel;
 import jp.tf_web.radiolink.ncmb.db.ChannelUser;
 import jp.tf_web.radiolink.net.NetWorkUtil;
@@ -34,6 +35,9 @@ import jp.tf_web.radiolink.net.udp.service.UDPServiceReceiver;
  */
 public class AudioController {
     private static String TAG = "AudioController";
+
+    //Bluetoothヘッドセットへの接続等
+    private BluetoothAudioDeviceManager bluetoothAudioDeviceManager;
 
     //リスナー
     private AudioControllerListener listener;
@@ -99,6 +103,11 @@ public class AudioController {
      */
     public void initialize(final int audioStream) {
 
+        //Bluetoothヘッドセットを利用する
+        if(bluetoothAudioDeviceManager == null) {
+            bluetoothAudioDeviceManager = new BluetoothAudioDeviceManager(this.context);
+        }
+
         //OPUSデコード,エンコード
         if(opusManager == null) {
             opusManager = new OpusManager(Config.SAMPLE_RATE_IN_HZ,
@@ -115,7 +124,7 @@ public class AudioController {
 
         //録音関連処理の初期化
         if(recordManager == null) {
-            recordManager = new RecordManager(this.context, this.sampleRateInHz, this.bufSize, recordManagerListener);
+            recordManager = RecordManager.getInstance(this.context, this.sampleRateInHz, this.bufSize, recordManagerListener);
         }
 
         //UDPServiceからの受信を受け取るレシーバー
@@ -131,6 +140,9 @@ public class AudioController {
      */
     public void start(final int audioStream){
         initialize(audioStream);
+
+        //Bluetoothヘッドセットがあればそれを使う
+        bluetoothAudioDeviceManager.startVoiceRecognition();
 
         //ローカルIPアドレスを取得
         NetWorkUtil.getLocalIpv4Address(new NetWorkUtil.GetLocalIpv4AddressListener() {
@@ -160,11 +172,21 @@ public class AudioController {
      */
     public void stop(){
         activeChannel = null;
-        writePacketThread.stopRunning();
-        writePacketThread = null;
 
-        recordManager.stop();
-        recordManager = null;
+        //Bluetoothヘッドセットから切断
+        if(bluetoothAudioDeviceManager != null) {
+            bluetoothAudioDeviceManager.stopVoiceRecognition();
+        }
+
+        if(writePacketThread != null) {
+            writePacketThread.stopRunning();
+            writePacketThread = null;
+        }
+
+        if(recordManager != null) {
+            recordManager.stop();
+            recordManager = null;
+        }
     }
 
     /** クラスの利用停止

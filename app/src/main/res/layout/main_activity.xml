@@ -6,7 +6,6 @@
         android:orientation="vertical"
         android:id="@+id/mainLayout">
 
-
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -36,8 +35,12 @@
 
         <include layout="@layout/item_media_type" />
 
-        <include layout="@layout/item_hands_free_switch" />
-
     </FrameLayout>
+
+    <ImageView
+        android:layout_width="match_parent"
+        android:layout_height="5dp"
+        android:id="@+id/imgVolume"
+        android:layout_gravity="bottom" />
 
 </FrameLayout>

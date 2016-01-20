@@ -62,6 +62,6 @@ public class Config {
     //パケットの有効期限 [ミリ秒] 5000ミリ秒遅れたら破棄
     public static long PACKET_TIMESTAMP_EXPIRE_MSEC = 60*1000;
 
-    //起動時のチャンネルコード
-    public static final String DEFAULT_CHANNEL_CODE = "testChannel";
+    //チャンネルコードの最小文字数
+    public static final int CHANNEL_CODE_MINI_LENGTH = 8;
 }
