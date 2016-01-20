@@ -5,6 +5,7 @@ import android.media.AudioManager;
 import android.util.Log;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -260,24 +261,22 @@ public class AudioController {
             if((ip.equals(publicIp)) && (publicPort == port)){
                 continue;
             }
+
             //送信
-            udpServiceSendByteArray(cu,src);
+            udpServiceSendByteArray(publicAddr,cu,src);
         }
     }
 
     /** UDPサービスに byte[]データを送信
      *
+     * @param currentUserPublicAddr 自分のパブリックIP,ポート
      * @param channelUser チャンネルユーザー
      * @param src  byte[]データ
      */
-    private void udpServiceSendByteArray(final ChannelUser channelUser,final byte[] src){
+    private void udpServiceSendByteArray(final InetSocketAddress currentUserPublicAddr,final ChannelUser channelUser,final byte[] src){
         //データを送信
         Map<String,Object> params = new HashMap<String,Object>(){
             {
-                //送信先パブリックIP,ポート
-                put(UDPService.KEY_NAME_CONNECT_HOST, channelUser.publicSocketAddress.getAddress().getHostAddress());
-                put(UDPService.KEY_NAME_CONNECT_PORT, Integer.valueOf(channelUser.publicSocketAddress.getPort()));
-
                 //送信先ローカルIPポート
                 put(UDPService.KEY_NAME_SEND_HOST, channelUser.localSocketAddress.getAddress().getHostAddress());
                 put(UDPService.KEY_NAME_SEND_PORT, Integer.valueOf(channelUser.localSocketAddress.getPort()));
@@ -285,6 +284,24 @@ public class AudioController {
                 put(UDPService.KEY_NAME_SEND_BUFFER, src);
             }
         };
+
+        //TODO: 自分のパブリックIPと送信先パブリックIPが一致している場合ローカルIPに送信する
+        //自分のパブリックIP
+        InetAddress currentPublicAddr = currentUserPublicAddr.getAddress();
+        //送信先パブリックIP
+        InetAddress cuPublicAddr = channelUser.publicSocketAddress.getAddress();
+        if(currentPublicAddr.equals(cuPublicAddr) == false){
+            //一致してなかった場合
+            //送信先が 別ネットワークにいるので パブリックIP,ポート を設定
+            params.put(UDPService.KEY_NAME_CONNECT_HOST, cuPublicAddr.getHostAddress());
+            params.put(UDPService.KEY_NAME_CONNECT_PORT, Integer.valueOf(channelUser.publicSocketAddress.getPort()));
+        }
+        else{
+            //送信先が同一ネットワークにあるので 送信先ローカルIP,ポートを設定
+            params.put(UDPService.KEY_NAME_CONNECT_HOST, channelUser.localSocketAddress.getAddress().getHostAddress());
+            params.put(UDPService.KEY_NAME_CONNECT_PORT, Integer.valueOf(channelUser.localSocketAddress.getPort()));
+        }
+
         UDPService.sendCmd(this.context, UDPService.CMD_SEND, params);
     }
 
