@@ -190,10 +190,11 @@ public class AudioController {
         }
     }
 
-    /** クラスの利用停止
+    /** 利用停止
      *
      */
     public void destroy(){
+        stop();
         if(opusManager != null){
             try{
                 opusManager.close();

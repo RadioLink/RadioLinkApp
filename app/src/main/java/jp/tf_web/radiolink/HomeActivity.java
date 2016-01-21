@@ -38,6 +38,8 @@ import jp.tf_web.radiolink.bluetooth.MediaButtonReceiver;
 import jp.tf_web.radiolink.bluetooth.MediaButtonReceiverListener;
 import jp.tf_web.radiolink.controller.AudioController;
 import jp.tf_web.radiolink.controller.AudioControllerListener;
+import jp.tf_web.radiolink.controller.NetWorkController;
+import jp.tf_web.radiolink.controller.NetWorkControllerListener;
 import jp.tf_web.radiolink.ncmb.gcm.GcmSendPushListener;
 import jp.tf_web.radiolink.ncmb.gcm.GcmUtil;
 import jp.tf_web.radiolink.ncmb.gcm.GcmUtilRegistrationListener;
@@ -80,6 +82,9 @@ public class HomeActivity extends Activity
 
     //再生,録音,通信処理をするクラス
     private AudioController audioController;
+
+    //ネットワーク関係の処理をするクラス
+    private NetWorkController netWorkController;
 
     //MEDIA_BUTTONのクリック受け取り
     private MediaButtonReceiver mediaButtonReceiver;
@@ -258,6 +263,11 @@ public class HomeActivity extends Activity
         if(audioController != null) {
             audioController.destroy();
         }
+
+        //ネットワーク監視等の利用停止
+        if(netWorkController != null){
+            netWorkController.destroy();
+        }
     }
 
     /** メニューを画面に追加
@@ -397,6 +407,11 @@ public class HomeActivity extends Activity
             audioController = new AudioController(getApplicationContext(), Config.SAMPLE_RATE_IN_HZ, Config.OPUS_FRAME_SIZE * 2, audioControllerListener);
         }
 
+        //ネットワーク接続状態の監視
+        if(netWorkController == null){
+            netWorkController = new NetWorkController(getApplicationContext(),netWorkControllerListener);
+        }
+
         //照度センサーを初期化
         if(lightSensorManager == null) {
             lightSensorManager = new LightSensorManager(getApplicationContext(), lightSensorManagerListener);
@@ -416,16 +431,19 @@ public class HomeActivity extends Activity
         //再生 開始
         audioController.start(AudioManager.STREAM_MUSIC);
 
+        //ネットワーク監視を開始
+        netWorkController.start();
+
         //照度センサーを利用 開始
         lightSensorManager.start();
     }
 
     //各クラスの終了
     private void stop(){
-        //録音 停止
-        if(audioController != null) {
-            audioController.stop();
-            audioController = null;
+        //ネットワーク監視を停止
+        if(netWorkController != null){
+            netWorkController.stop();
+            netWorkController = null;
         }
 
         //MEDIA_BUTTON イベントを受信する事を止める
@@ -438,6 +456,12 @@ public class HomeActivity extends Activity
         if(lightSensorManager != null) {
             lightSensorManager.stop();
             lightSensorManager = null;
+        }
+
+        //録音 停止
+        if(audioController != null) {
+            audioController.stop();
+            audioController = null;
         }
 
         //UDPサービス STOP
@@ -969,4 +993,27 @@ public class HomeActivity extends Activity
         });
 
     }
+
+    //ネットワーク接続状態の変更等の通知
+    private NetWorkControllerListener netWorkControllerListener = new NetWorkControllerListener(){
+
+        /** ネットワーク接続状態に変更があった
+         *
+         * @param type
+         * @param connected
+         */
+        @Override
+        public void onConnectedChanged(int type, boolean connected) {
+
+            if(connected) {
+                //Toast.makeText(getApplicationContext(), "connect type:" + type, Toast.LENGTH_SHORT).show();
+                Log.d(TAG,"connect activeChannel "+activeChannel);
+                //JOIN済みの場合 再JOINして STUN アドレス解決等を行う
+                if(activeChannel != null){
+                    joinChannel( activeChannel );
+                    activeChannel = null;
+                }
+            }
+        }
+    };
 }

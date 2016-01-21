@@ -1,5 +1,8 @@
 package jp.tf_web.radiolink.net;
 
+import android.content.Context;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.AsyncTask;
 import android.util.Log;
 
@@ -101,4 +104,30 @@ public class NetWorkUtil {
          */
         void onResult(String address);
     };
+
+
+    /** ネットワークの接続状態の取得
+     *
+     * @param context
+     * @return
+     */
+    public static int isConnectedType(final Context context){
+        int result = -1;//ConnectivityManager.TYPE_NONE
+        ConnectivityManager connectivityManager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo networkInfo = connectivityManager.getActiveNetworkInfo();
+        if(networkInfo != null){
+            if(networkInfo.isConnected()){
+                result = networkInfo.getType();
+                /*
+                if (networkInfo.getType() == ConnectivityManager.TYPE_WIFI) {
+
+                }
+                else if (networkInfo.getType() == ConnectivityManager.TYPE_MOBILE) {
+
+                }
+                */
+            }
+        }
+        return result;
+    }
 }
