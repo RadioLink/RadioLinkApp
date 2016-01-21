@@ -1,6 +1,7 @@
 package jp.tf_web.radiolink.qrcode;
 
 import android.app.Activity;
+import android.app.Fragment;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Color;
@@ -67,6 +68,17 @@ public class QRCodeUtil {
      */
     public static void scanQRCode(Activity activity){
         IntentIntegrator integrator = new IntentIntegrator(activity);
+        integrator.setCaptureActivity(QRCodeActivity.class);
+        integrator.setOrientationLocked(false);
+        integrator.initiateScan();
+    }
+
+    /** QRコードキャプチャーの為の画面を開く
+     *
+     * @param fragment
+     */
+    public static void scanQRCode(Fragment fragment){
+        IntentIntegrator integrator = new FragmentIntentIntegrator(fragment);
         integrator.setCaptureActivity(QRCodeActivity.class);
         integrator.setOrientationLocked(false);
         integrator.initiateScan();

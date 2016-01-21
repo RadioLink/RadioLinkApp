@@ -583,7 +583,7 @@ public class TestActivity extends Activity
                     Log.d(TAG, "createChannel success " + channel.getChannelCode());
 
                     //Channel アイコン設定
-                    Bitmap bmp = BitmapFactory.decodeResource(getResources(), R.drawable.dummy);
+                    Bitmap bmp = BitmapFactory.decodeResource(getResources(), R.drawable.icon_dummy);
                     byte[] data = BitmapUtil.bmp2byteArray(bmp, Bitmap.CompressFormat.JPEG);
                     String extension = Bitmap.CompressFormat.JPEG.name();
                     Log.d(TAG, "data size:" + data.length + " extension:" + extension);

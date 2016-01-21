@@ -230,16 +230,6 @@ public class HomeActivity extends Activity
             }
         }
 
-        //QRコードスキャン結果を受け取る
-        if(isResult == false) {
-            isResult = QRCodeUtil.onActivityResult(requestCode, resultCode, data, new ScanQRCodeResultListener() {
-                @Override
-                public void success(IntentResult scanResult) {
-                    Log.d(TAG, "QRCode "+scanResult.getContents());
-                }
-            });
-        }
-
         if(isResult == false) {
             //通常の onActivityResult を実行
             super.onActivityResult(requestCode, resultCode, data);

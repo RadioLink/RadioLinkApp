@@ -2,8 +2,11 @@ package jp.tf_web.radiolink.view.dialog;
 
 import android.app.Dialog;
 import android.app.DialogFragment;
+import android.app.Fragment;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
@@ -19,8 +22,11 @@ import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.Toast;
 
+import com.google.zxing.integration.android.IntentResult;
 import com.nifty.cloud.mb.core.NCMBException;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -31,6 +37,9 @@ import jp.tf_web.radiolink.ncmb.db.NCMBUtil;
 import jp.tf_web.radiolink.ncmb.db.listener.CreateChannelListener;
 import jp.tf_web.radiolink.ncmb.db.listener.GetChannelListListener;
 import jp.tf_web.radiolink.ncmb.db.listener.SetChannelIconImageListener;
+import jp.tf_web.radiolink.qrcode.QRCodeUtil;
+import jp.tf_web.radiolink.qrcode.ScanQRCodeResultListener;
+import jp.tf_web.radiolink.scheme.ShareActionUtil;
 import jp.tf_web.radiolink.util.BitmapUtil;
 import jp.tf_web.radiolink.util.EditTextUtil;
 
@@ -89,6 +98,9 @@ public class ChannelCodeDialogFragment extends DialogFragment {
 
         // Close ボタンのリスナ
         dialog.findViewById(R.id.btnCancel).setOnClickListener(this.btnCancelOnClickListener);
+
+        //QRコードリーダー起動
+        dialog.findViewById(R.id.btnQRCodeReader).setOnClickListener(this.btnQRCodeReaderOnClickListener);
 
         //チャンネルコード欄
         this.txtChannelCode = (EditText) dialog.findViewById(R.id.txtChannelCode);
@@ -334,4 +346,47 @@ public class ChannelCodeDialogFragment extends DialogFragment {
         }
     }
 
+    //QRコード読み取りボタン
+    private View.OnClickListener btnQRCodeReaderOnClickListener = new View.OnClickListener(){
+
+        @Override
+        public void onClick(View v) {
+            //QRコードを読み込む
+            QRCodeUtil.scanQRCode( ChannelCodeDialogFragment.this );
+        }
+    };
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent intent) {
+        Log.d(TAG, "onActivityResult");
+        //QRコードスキャン結果を受け取る
+        boolean isResult = QRCodeUtil.onActivityResult(requestCode, resultCode, intent, new ScanQRCodeResultListener() {
+            @Override
+            public void success(IntentResult scanResult) {
+                String shareUri = scanResult.getContents();
+                Log.d(TAG, "shareUri " + shareUri);
+                if((shareUri == null)||(shareUri.length() == 0)){
+                    Log.d(TAG, "shareURI is null");
+                    return;
+                }
+                if(shareUri.indexOf(Config.SCHEME_REDIRECT_API) == -1){
+                    //対象外のQRコード
+                    Log.d(TAG, "SCHEME_REDIRECT_API not found.");
+                    return;
+                }
+
+                try {
+                    String shareScheme = URLDecoder.decode(shareUri.replace(Config.SCHEME_REDIRECT_API, ""), "UTF-8");
+                    Uri shareSchemeUri = Uri.parse(shareScheme);
+                    String channelCode = shareSchemeUri.getQueryParameter(ShareActionUtil.KEY_VALUE_SHARE_CHANNEL_CODE);
+                    Log.d(TAG, "channelCode" + channelCode);
+
+                    //チャンネルコードを チャンネルコード欄に設定
+                    txtChannelCode.setText(channelCode);
+                } catch (UnsupportedEncodingException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+    }
 }

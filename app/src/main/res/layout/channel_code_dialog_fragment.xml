@@ -14,11 +14,20 @@
         android:layout_gravity="center_horizontal">
 
         <EditText
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:id="@+id/txtChannelCode"
             android:hint="Channel Code"
-            android:inputType="text"/>
+            android:inputType="text"
+            android:layout_weight="1" />
+
+        <ImageButton
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:id="@+id/btnQRCodeReader"
+            android:src="@drawable/quick_response_code"
+            android:background="@null"
+            android:scaleType="centerCrop" />
 
     </LinearLayout>
 
