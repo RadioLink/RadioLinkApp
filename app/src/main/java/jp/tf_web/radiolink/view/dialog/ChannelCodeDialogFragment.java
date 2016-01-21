@@ -122,6 +122,7 @@ public class ChannelCodeDialogFragment extends DialogFragment {
 
         //TODO: 過去にJOINしたことのあるチャンネル一覧を取得して一覧に設定する
         //List<Channel> channels = new ArrayList<>();
+        getChannelList(Config.DefaultChannelCode);
 
         return dialog;
     }

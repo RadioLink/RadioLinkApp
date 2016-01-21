@@ -64,4 +64,7 @@ public class Config {
 
     //チャンネルコードの最小文字数
     public static final int CHANNEL_CODE_MINI_LENGTH = 8;
+
+    //共通の初期チャンネルコード
+    public static final String DefaultChannelCode = "RadioLinkChannel";
 }
