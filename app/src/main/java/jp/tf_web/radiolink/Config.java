@@ -26,7 +26,7 @@ public class Config {
     //  32 kb/s bitrate.   enc_size:223  固定電話,AMラジオ
     //  12 kb/s bitrate.   enc_size: 80  3G回線
     //   8 kb/s bitrate.   enc_size: 42  携帯電話
-    public static final int OPUS_OUTPUT_BITRATE_BPS = 12*1024;
+    public static final int OPUS_OUTPUT_BITRATE_BPS = 32*1024;
 
     //ボリュームの閾値
     public static final int VOLUME_THRESHOLD = 600;
