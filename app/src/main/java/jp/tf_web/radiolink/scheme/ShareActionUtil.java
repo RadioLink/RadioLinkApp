@@ -111,6 +111,13 @@ public class ShareActionUtil {
         this.actionProvider.setShareIntent(shareIntent);
     }
 
+    /** ShareActionProviderにインテントの設定を解除する
+     *
+     */
+    public void removeShareIntent(){
+        this.actionProvider.setShareIntent(null);
+    }
+
     /** Activityに通知する
      *
      * @param context

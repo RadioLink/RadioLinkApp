@@ -180,7 +180,7 @@ public class HomeActivity extends Activity
         boolean result = false;
 
         String action = getIntent().getAction();
-        Log.d(TAG, "action:"+action);
+        Log.d(TAG, "action:" + action);
 
         //SCHEME起動された場合 チャンネルコードを取得する
         if (Intent.ACTION_VIEW.equals(action)) {
@@ -305,19 +305,26 @@ public class HomeActivity extends Activity
     private void setActiveChannel(Channel channel){
 
         this.activeChannel = channel;
-        this.audioController.setActiveChannel(channel);
+        if(this.audioController != null) {
+            this.audioController.setActiveChannel(channel);
+        }
+
+        if(channel == null) {
+            //this.lblChannelCode.setText("");
+            this.lblUserCount.setText("0");
+            ShareActionUtil.getInstance().removeShareIntent();
+            this.btnCamera.setImageResource(R.drawable.camera01);
+            return;
+        }
+
+        //チャンネルコードを画面に表示
+        this.lblChannelCode.setText(channel.getChannelCode());
 
         // ShareActionProviderのチャンネルコードを更新 インテントの設定
         ShareActionUtil.getInstance().setShareIntent(getApplicationContext(), channel.getChannelCode());
 
-        //チャンネルコードを画面に表示
-        this.lblChannelCode.setText("");
-        if(channel != null) {
-            this.lblChannelCode.setText(channel.getChannelCode());
-        }
-
         //チャンネルの画像をボタンに設定
-        byte[] icon = this.activeChannel.getIcon();
+        byte[] icon = channel.getIcon();
         if(icon != null) {
             this.btnCamera.setImageBitmap(BitmapUtil.byte2bmp(icon));
         }
@@ -440,6 +447,7 @@ public class HomeActivity extends Activity
 
     //各クラスの終了
     private void stop(){
+
         //ネットワーク監視を停止
         if(netWorkController != null){
             netWorkController.stop();
@@ -466,6 +474,7 @@ public class HomeActivity extends Activity
 
         //UDPサービス STOP
         UDPService.sendCmd(getApplicationContext(), UDPService.CMD_STOP);
+
     }
 
     //カメラボタン
@@ -516,12 +525,12 @@ public class HomeActivity extends Activity
     private boolean joinChannel(final String channelCode){
         Log.d(TAG,"joinChannel(channelCode)");
         if(channelCode == null){
-            Log.d(TAG,"channelCode is null");
+            Log.d(TAG, "channelCode is null");
             return false;
         }
 
         //検索して見つかったチャンネルを選択
-        ncmbUtil.getChannelList(channelCode,new GetChannelListListener() {
+        ncmbUtil.getChannelList(channelCode, new GetChannelListListener() {
             @Override
             public void success(List<Channel> channels) {
                 Log.d(TAG, "getChannelList success size:" + channels.size());
@@ -547,7 +556,7 @@ public class HomeActivity extends Activity
      * @param channel チャンネル
      */
     private boolean joinChannel(final Channel channel){
-        Log.d(TAG,"joinChannel(channel)");
+        Log.d(TAG, "joinChannel(channel)");
         if(channel == null){
             Log.d(TAG,"channel is null");
             return false;
@@ -556,11 +565,35 @@ public class HomeActivity extends Activity
         //start処理完了後に join 処理をする join対象のチャンネルを保持しておく
         temporaryJoinChannel = channel;
 
-        //停止
-        stop();
+        //チャンネルコードを仮設定　
+        this.lblChannelCode.setText( channel.getChannelCode() );
 
-        //開始
-        start();
+        //アクティブなチャンネルが設定済みの場合は Exitしてから join する
+        if(activeChannel != null){
+            exitChannel(activeChannel, new ExitChannelUserlistener() {
+                @Override
+                public void success() {
+                    //停止
+                    stop();
+
+                    //開始
+                    start();
+                }
+
+                @Override
+                public void error(NCMBException e) {
+
+                }
+            });
+        }
+        else {
+            //初回だったので開始
+            //停止
+            stop();
+
+            //開始
+            start();
+        }
 
         return true;
     }
@@ -569,7 +602,7 @@ public class HomeActivity extends Activity
      *
      * @param channel
      */
-    private void exitChannel(final Channel channel){
+    private void exitChannel(final Channel channel,final ExitChannelUserlistener listener){
         //チャンネルから Exit する
         ncmbUtil.exitChannelUser(channel, audioController.getPublicSocketAddress(), audioController.getLocalSocketAddress(), new ExitChannelUserlistener() {
             /** 成功
@@ -578,8 +611,7 @@ public class HomeActivity extends Activity
             @Override
             public void success() {
                 //EXIT に成功
-                setActiveChannel( null );
-                Toast.makeText(getApplicationContext(), "EXIT!", Toast.LENGTH_SHORT).show();
+                //Toast.makeText(getApplicationContext(), "EXIT!", Toast.LENGTH_SHORT).show();
 
                 //GCM 通知
                 GcmUtil.getInstance().channelUpdateSendPush(getApplicationContext(), activeChannel, new GcmSendPushListener() {
@@ -593,6 +625,11 @@ public class HomeActivity extends Activity
                         Log.d(TAG,"GCM sendPush error");
                     }
                 });
+
+                //GCM通知してから null を設定
+                setActiveChannel(null);
+
+                listener.success();
             }
 
             /** 失敗
@@ -602,6 +639,7 @@ public class HomeActivity extends Activity
             @Override
             public void error(NCMBException e) {
                 Log.e(TAG, "error:" + e);
+                listener.error(e);
             }
         });
 
@@ -868,8 +906,6 @@ public class HomeActivity extends Activity
             //チャンネルコードが入力され OK を押された
             String channelCode = params.getString(ChannelCodeDialogFragment.KEY_CHANNEL_CODE);
             if((channelCode != null) && (channelCode.length() > 0)) {
-                HomeActivity.this.lblChannelCode.setText(channelCode);
-
                 // join
                 joinChannel(channelCode);
             }

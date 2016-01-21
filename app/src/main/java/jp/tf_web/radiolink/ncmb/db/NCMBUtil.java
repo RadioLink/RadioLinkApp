@@ -573,11 +573,13 @@ public class NCMBUtil {
             public void success(final Channel channel) {
                 //チャンネルにユーザーを追加
                 ChannelUser removeChannelUser = channel.removeChannelUser(cu);
-                try {
-                    //サーバーからも削除
-                    removeChannelUser.toNCMBObject().deleteObject();
-                } catch (NCMBException e) {
-                    e.printStackTrace();
+                if(removeChannelUser != null) {
+                    try {
+                        //サーバーからも削除
+                        removeChannelUser.toNCMBObject().deleteObject();
+                    } catch (NCMBException e) {
+                        e.printStackTrace();
+                    }
                 }
 
                 //チャンネルユーザー一覧を更新
