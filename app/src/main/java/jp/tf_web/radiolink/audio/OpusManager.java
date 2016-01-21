@@ -151,8 +151,10 @@ public class OpusManager
 			//Opus エンコードする
 			byte[] outByeBuf = new byte[src.length];
 			int enc_size = encode(src, outByeBuf);
-			result = new byte[enc_size];
-			System.arraycopy(outByeBuf, 0, result, 0, enc_size);
+			if(enc_size > 1) {
+				result = new byte[enc_size];
+				System.arraycopy(outByeBuf, 0, result, 0, enc_size);
+			}
 		}
 		catch (IOException e){
 			//Opus エンコードに失敗

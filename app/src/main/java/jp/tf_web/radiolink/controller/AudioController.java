@@ -323,7 +323,7 @@ public class AudioController {
 
             //OPUSエンコード
             byte[] opus = opusManager.encode(data);
-            if(opus.length > 1) {
+            if((opus != null) && (opus.length > 1)){
                 //パケットにまとめてから UDPでユーザーに送信する
                 final Packet packet = PacketUtil.getInstance().createPacket();
                 packet.addPayload(opus);
