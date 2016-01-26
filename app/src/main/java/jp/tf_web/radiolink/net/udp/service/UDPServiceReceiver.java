@@ -131,7 +131,7 @@ public class UDPServiceReceiver extends BroadcastReceiver {
      * @param intent
      */
     private void onReceive(final Intent intent){
-        Log.d(TAG, "RECEIVE");
+        Log.d(TAG, "onReceive");
         Bundle bundle = intent.getExtras();
         final String cmd = (String) intent.getCharSequenceExtra(UDPService.KEY_NAME_CMD);
         //メッセージが届いた

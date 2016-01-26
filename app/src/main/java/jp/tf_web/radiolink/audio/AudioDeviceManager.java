@@ -97,7 +97,7 @@ public class AudioDeviceManager {
         }
         else if(mode == AUDIO_DEVICE_MODE.NORMAL){
             //通話用スピーカー
-            audioManager.setMode(AudioManager.MODE_IN_CALL);
+            audioManager.setMode(AudioManager.MODE_NORMAL);
             audioManager.setSpeakerphoneOn(false);
             audioManager.setBluetoothScoOn(false);
             audioManager.stopBluetoothSco();

@@ -14,7 +14,7 @@
     <string name="join_channel_dialog_title">確認</string>
     <string name="join_channel_dialog_message">このチャンネルに参加しますか？</string>
 
-    <string name="channel_code_is_null">ChannelCodeを設定してください。</string>
+    <string name="channel_code_is_null">ChannelCode欄をタップしてチャンネルコードを設定してください。</string>
     <string name="channel_is_not_owner">画像はChannel作成ユーザだけが設定できます。</string>
 
     <string name="media_type_headset">Headset</string>
