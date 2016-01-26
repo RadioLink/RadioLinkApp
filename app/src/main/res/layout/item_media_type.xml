@@ -9,7 +9,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Speaker"
+        android:text="@string/media_type_normal"
         android:id="@+id/lblMediaType"
         android:textColor="@color/label_color"/>
 
@@ -17,7 +17,7 @@
         android:layout_width="32dp"
         android:layout_height="32dp"
         android:id="@+id/btnMedia"
-        android:background="@drawable/audio45"
+        android:background="@drawable/telephone46"
         android:layout_gravity="center_horizontal"
         style="?android:attr/borderlessButtonStyle" />
 

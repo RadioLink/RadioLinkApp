@@ -3,6 +3,9 @@
  */
 package jp.tf_web.radiolink;
 
+import android.*;
+import android.Manifest;
+import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Bitmap;
@@ -27,8 +30,10 @@ import android.widget.Toast;
 import com.google.zxing.integration.android.IntentResult;
 import com.nifty.cloud.mb.core.NCMBException;
 
+import java.util.ArrayList;
 import java.util.List;
 
+import jp.tf_web.radiolink.audio.AudioDeviceManager;
 import jp.tf_web.radiolink.billing.InAppBillingUtil;
 import jp.tf_web.radiolink.billing.InAppBillingUtilListener;
 import jp.tf_web.radiolink.billing.util.IabResult;
@@ -65,6 +70,7 @@ import jp.tf_web.radiolink.util.BitmapUtil;
 import jp.tf_web.radiolink.scheme.ShareActionUtil;
 import jp.tf_web.radiolink.util.CameraUtil;
 import jp.tf_web.radiolink.util.CameraUtilListener;
+import jp.tf_web.radiolink.util.PermissionUtil;
 import jp.tf_web.radiolink.view.dialog.ChannelCodeDialogFragment;
 import jp.tf_web.radiolink.view.dialog.DialogFragmentListener;
 import jp.tf_web.radiolink.view.dialog.JoinChannelDialogFragment;
@@ -165,6 +171,9 @@ public class HomeActivity extends Activity
         btnMedia = (Button)findViewById(R.id.btnMedia);
         btnMedia.setOnClickListener(btnMediaOnClickListener);
 
+        //M以上の場合パーミッションの確認をする
+        checkPermissions();
+
         //起動時のサインイン,ログイン処理
         login();
 
@@ -236,6 +245,12 @@ public class HomeActivity extends Activity
         }
     }
 
+    @TargetApi(Build.VERSION_CODES.M)
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
+        //許可ダイアログに対してユーザーが選択した結果の受け取り
+        PermissionUtil.getInstance().onRequestPermissionsResult(requestCode,permissions,grantResults);
+    }
 
     @Override
     protected void onDestroy() {
@@ -699,7 +714,7 @@ public class HomeActivity extends Activity
                 Log.d(TAG,"IAB セットアップ 失敗");
                 return;
             }
-            Log.d(TAG,"IAB セットアップ 成功");
+            Log.d(TAG, "IAB セットアップ 成功");
         }
 
         /** 購入済みアイテムの取得結果の通知
@@ -718,7 +733,7 @@ public class HomeActivity extends Activity
             // 購入済みアイテムの確認
             purchase = inv.getPurchase(Config.PRODUCT_ITEM_1_ID);
             if (purchase != null) {
-                Log.d(TAG,"IAB 商品を購入済み");
+                Log.d(TAG, "IAB 商品を購入済み");
                 //TODO: 購入済みなので 制限された機能の開放等を行う
                 return;
             }
@@ -734,6 +749,10 @@ public class HomeActivity extends Activity
         public void onIabPurchaseFinished(IabResult result, Purchase purchase) {
             if (result.isFailure()) {
                 Log.d(TAG,"IAB 購入 失敗");
+
+                //NORMAL 受話器アイコン
+                setAudioDevice(AudioDeviceManager.AUDIO_DEVICE_MODE.NORMAL);
+
                 return;
             }
             Log.d(TAG,"IAB 購入 成功");
@@ -743,7 +762,8 @@ public class HomeActivity extends Activity
                         + "orderIdは：" + purchase.getOrderId() + "\n"
                         + "INAPP_PURCHASE_DATAのJSONは：" + purchase.getOriginalJson());
 
-                //TODO: 購入商品に一致する機能解除等を行う
+                //購入商品に一致する機能解除等を行う
+                HomeActivity.this.purchase = purchase;
             }
         }
     };
@@ -780,12 +800,12 @@ public class HomeActivity extends Activity
                     GcmUtil.getInstance().channelUpdateSendPush(getApplicationContext(), activeChannel, new GcmSendPushListener() {
                         @Override
                         public void success() {
-                            Log.d(TAG,"GCM sendPush success");
+                            Log.d(TAG, "GCM sendPush success");
                         }
 
                         @Override
                         public void error(NCMBException e) {
-                            Log.d(TAG,"GCM sendPush error");
+                            Log.d(TAG, "GCM sendPush error");
                         }
                     });
                 }
@@ -913,32 +933,67 @@ public class HomeActivity extends Activity
 
         @Override
         public void onClick(View v) {
-            //購入済みアイテムの確認
-            if(purchase == null) {
-                //ヘッドセット利用は有料
-                if (inAppBillingUtil == null) return;
-                inAppBillingUtil.onBuyButtonClicked(HomeActivity.this, Config.PRODUCT_ITEM_1_ID);
-                //購入結果は inAppBillingUtil リスナーに通知される
+
+            Log.d(TAG,"btnMediaOnClickListener onClick");
+
+            if(audioController == null){
+                //チャンネル未設定の場合
+                String msg = getString(R.string.channel_code_is_null);
+                Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            //NORMAL → スピーカー → ヘッドセット
+            Log.d(TAG,"AudioDeviceMode:"+audioController.getAudioDeviceMode());
+            if(audioController.getAudioDeviceMode() == AudioDeviceManager.AUDIO_DEVICE_MODE.NORMAL){
+                //スピーカー
+                setAudioDevice(AudioDeviceManager.AUDIO_DEVICE_MODE.SPEAKER);
+            }
+            else if(audioController.getAudioDeviceMode() == AudioDeviceManager.AUDIO_DEVICE_MODE.SPEAKER){
+                    if(purchase == null) {
+                        //ヘッドセット利用は有料
+                        if (inAppBillingUtil == null) return;
+                        inAppBillingUtil.onBuyButtonClicked(HomeActivity.this, Config.PRODUCT_ITEM_1_ID);
+                        //購入結果は inAppBillingUtil リスナーに通知される
+                    }
+                    else{
+                        //ヘッドセット
+                        setAudioDevice(AudioDeviceManager.AUDIO_DEVICE_MODE.HEADSET);
+                    }
             }
             else {
-                //アイテム購入済みの場合 切り替え可能
-                TextView lblMediaType = (TextView) findViewById(R.id.lblMediaType);
-                boolean isChecked = getText(R.string.media_type_true).equals(lblMediaType.getText());
-                if(isChecked == false){
-                    //ヘッドセット
-                    lblMediaType.setText(getText(R.string.media_type_true));
-                    btnMedia.setBackgroundResource(R.drawable.headset16);
-                }
-                else{
-                    //スピーカー
-                    lblMediaType.setText(getText(R.string.media_type_false));
-                    btnMedia.setBackgroundResource(R.drawable.audio45);
-                }
-
+                //NORMAL 受話器アイコン
+                setAudioDevice(AudioDeviceManager.AUDIO_DEVICE_MODE.NORMAL);
             }
         }
+
     };
 
+    /** オーディオデバイスモードを切り替える
+     *
+     * @param mode
+     */
+    private void setAudioDevice(AudioDeviceManager.AUDIO_DEVICE_MODE mode){
+        TextView lblMediaType = (TextView) findViewById(R.id.lblMediaType);
+        if(mode == AudioDeviceManager.AUDIO_DEVICE_MODE.HEADSET){
+            //ヘッドセット
+            lblMediaType.setText(getText(R.string.media_type_headset));
+            btnMedia.setBackgroundResource(R.drawable.headset16);
+            audioController.setAudioDevice(AudioDeviceManager.AUDIO_DEVICE_MODE.HEADSET);
+        }
+        else if(mode == AudioDeviceManager.AUDIO_DEVICE_MODE.SPEAKER){
+            //スピーカー
+            lblMediaType.setText(getText(R.string.media_type_speaker));
+            btnMedia.setBackgroundResource(R.drawable.audio45);
+            audioController.setAudioDevice(AudioDeviceManager.AUDIO_DEVICE_MODE.SPEAKER);
+        }
+        else{
+            //NORMAL 受話器アイコン
+            lblMediaType.setText(getText(R.string.media_type_normal));
+            btnMedia.setBackgroundResource(R.drawable.telephone46);
+            audioController.setAudioDevice(AudioDeviceManager.AUDIO_DEVICE_MODE.NORMAL);
+        }
+    }
     /** GCMの通知を受信するリスナー
      *
      */
@@ -1042,4 +1097,20 @@ public class HomeActivity extends Activity
             }
         }
     };
+
+    /** パーミッションの確認
+     *
+     */
+    private void checkPermissions(){
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M){
+            List<String> permissions = new ArrayList<String>(){
+                {
+                    add(Manifest.permission.CAMERA);
+                    add(Manifest.permission.RECORD_AUDIO);
+                    add(Manifest.permission.WRITE_EXTERNAL_STORAGE);
+                }
+            };
+            PermissionUtil.getInstance().checkPermissions(this,permissions);
+        }
+    }
 }

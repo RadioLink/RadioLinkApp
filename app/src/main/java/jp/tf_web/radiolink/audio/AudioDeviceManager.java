@@ -1,4 +1,4 @@
-package jp.tf_web.radiolink.bluetooth;
+package jp.tf_web.radiolink.audio;
 
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -11,12 +11,14 @@ import android.util.Log;
 
 import java.util.List;
 
+import jp.tf_web.radiolink.bluetooth.BluetoothControlReceiver;
+
 /** Bluetoothヘッドセットを有効にするための設定
  *
  * Created by furukawanobuyuki on 2015/11/05.
  */
-public class BluetoothAudioDeviceManager {
-    private static String TAG = "BluetoothAudioDeviceManager";
+public class AudioDeviceManager {
+    private static String TAG = "AudioDeviceManager";
 
     private Context context;
 
@@ -38,14 +40,16 @@ public class BluetoothAudioDeviceManager {
 
     //オーディオデバイス タイプ
     public enum AUDIO_DEVICE_MODE{
-        NONE,
         NORMAL,
         SPEAKER,
         HEADSET
     }
 
+    //現在のオーディオデバイスモード
+    private AUDIO_DEVICE_MODE audioDeviceMode = AUDIO_DEVICE_MODE.NORMAL;
+
     //インストラクタ
-    public BluetoothAudioDeviceManager(Context context){
+    public AudioDeviceManager(Context context){
         this.context = context;
 
         //各種初期化
@@ -80,37 +84,41 @@ public class BluetoothAudioDeviceManager {
         if(mode == AUDIO_DEVICE_MODE.HEADSET) {
             //ヘッドセット
             audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
+            audioManager.setSpeakerphoneOn(false);
             audioManager.setBluetoothScoOn(true);
             audioManager.startBluetoothSco();
         }
         else if(mode == AUDIO_DEVICE_MODE.SPEAKER){
             //スピーカー
-            audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
+            audioManager.setMode(AudioManager.MODE_NORMAL);
             audioManager.setSpeakerphoneOn(true);
             audioManager.setBluetoothScoOn(false);
             audioManager.stopBluetoothSco();
         }
         else if(mode == AUDIO_DEVICE_MODE.NORMAL){
-            //通常
-            audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
+            //通話用スピーカー
+            audioManager.setMode(AudioManager.MODE_IN_CALL);
             audioManager.setSpeakerphoneOn(false);
             audioManager.setBluetoothScoOn(false);
             audioManager.stopBluetoothSco();
         }
-        else{
-            //スピーカー等の利用停止
-            audioManager.setSpeakerphoneOn(false);
-            audioManager.setBluetoothScoOn(false);
-            audioManager.stopBluetoothSco();
-        }
+        audioDeviceMode = mode;
+    }
+
+    /** 現在のオーディオデバイスモードを取得する
+     *
+     * @return
+     */
+    public AUDIO_DEVICE_MODE getAudioDeviceMode(){
+        return audioDeviceMode;
     }
 
     //ヘッドセットに接続
     public void startVoiceRecognition(){
-        if(bluetoothDevice == null) return;
-
         //オーディオデバイスの設定
         setAudioDevice(AUDIO_DEVICE_MODE.NORMAL);
+
+        if(bluetoothDevice == null) return;
 
         //MEDIA_BUTTONのイベントを受け取る
         controlReceiverName = new ComponentName(context, BluetoothControlReceiver.class);
@@ -127,9 +135,7 @@ public class BluetoothAudioDeviceManager {
         //Bluetooth ヘッドセットの利用を停止する
         bluetoothHeadset.stopVoiceRecognition(bluetoothDevice);
 
-        audioManager.setBluetoothScoOn(false);
-        audioManager.stopBluetoothSco();
-        audioManager.setMode(AudioManager.MODE_NORMAL);
+        setAudioDevice(AUDIO_DEVICE_MODE.NORMAL);
 
         //bluetoothAdapter.closeProfileProxy(BluetoothProfile.HEADSET, bluetoothHeadset);
         //bluetoothAdapter = null;

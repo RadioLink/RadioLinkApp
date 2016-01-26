@@ -37,7 +37,7 @@ import jp.tf_web.radiolink.billing.InAppBillingUtilListener;
 import jp.tf_web.radiolink.billing.util.IabResult;
 import jp.tf_web.radiolink.billing.util.Inventory;
 import jp.tf_web.radiolink.billing.util.Purchase;
-import jp.tf_web.radiolink.bluetooth.BluetoothAudioDeviceManager;
+import jp.tf_web.radiolink.audio.AudioDeviceManager;
 import jp.tf_web.radiolink.bluetooth.MediaButtonReceiver;
 import jp.tf_web.radiolink.bluetooth.MediaButtonReceiverListener;
 import jp.tf_web.radiolink.controller.AudioController;
@@ -84,7 +84,7 @@ public class TestActivity extends Activity
     private TextView tv;
 
     //Bluetoothヘッドセットへの接続等
-    private BluetoothAudioDeviceManager bluetoothAudioDeviceManager;
+    private AudioDeviceManager bluetoothAudioDeviceManager;
 
     //再生,録音,通信処理をするクラス
     private AudioController audioController;
@@ -305,7 +305,7 @@ public class TestActivity extends Activity
 
         //Bluetoothヘッドセットを利用する
         if(bluetoothAudioDeviceManager == null) {
-            bluetoothAudioDeviceManager = new BluetoothAudioDeviceManager(getApplicationContext());
+            bluetoothAudioDeviceManager = new AudioDeviceManager(getApplicationContext());
         }
 
         //照度センサーを初期化

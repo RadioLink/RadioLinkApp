@@ -18,14 +18,12 @@ import jp.tf_web.radiolink.Config;
 import jp.tf_web.radiolink.audio.OpusManager;
 import jp.tf_web.radiolink.audio.RecordManager;
 import jp.tf_web.radiolink.audio.RecordManagerListener;
-import jp.tf_web.radiolink.audio.TrackManager;
-import jp.tf_web.radiolink.bluetooth.BluetoothAudioDeviceManager;
+import jp.tf_web.radiolink.audio.AudioDeviceManager;
 import jp.tf_web.radiolink.ncmb.db.Channel;
 import jp.tf_web.radiolink.ncmb.db.ChannelUser;
 import jp.tf_web.radiolink.net.NetWorkUtil;
 import jp.tf_web.radiolink.net.protocol.PacketUtil;
 import jp.tf_web.radiolink.net.protocol.packet.Packet;
-import jp.tf_web.radiolink.net.protocol.packet.Payload;
 import jp.tf_web.radiolink.net.udp.service.UDPService;
 import jp.tf_web.radiolink.net.udp.service.UDPServiceListener;
 import jp.tf_web.radiolink.net.udp.service.UDPServiceReceiver;
@@ -38,7 +36,7 @@ public class AudioController {
     private static String TAG = "AudioController";
 
     //Bluetoothヘッドセットへの接続等
-    private BluetoothAudioDeviceManager bluetoothAudioDeviceManager;
+    private AudioDeviceManager audioDeviceManager;
 
     //リスナー
     private AudioControllerListener listener;
@@ -105,8 +103,8 @@ public class AudioController {
     public void initialize(final int audioStream) {
 
         //Bluetoothヘッドセットを利用する
-        if(bluetoothAudioDeviceManager == null) {
-            bluetoothAudioDeviceManager = new BluetoothAudioDeviceManager(this.context);
+        if(audioDeviceManager == null) {
+            audioDeviceManager = new AudioDeviceManager(this.context);
         }
 
         //OPUSデコード,エンコード
@@ -143,7 +141,7 @@ public class AudioController {
         initialize(audioStream);
 
         //Bluetoothヘッドセットがあればそれを使う
-        bluetoothAudioDeviceManager.startVoiceRecognition();
+        audioDeviceManager.startVoiceRecognition();
 
         //ローカルIPアドレスを取得
         NetWorkUtil.getLocalIpv4Address(new NetWorkUtil.GetLocalIpv4AddressListener() {
@@ -175,8 +173,8 @@ public class AudioController {
         activeChannel = null;
 
         //Bluetoothヘッドセットから切断
-        if(bluetoothAudioDeviceManager != null) {
-            bluetoothAudioDeviceManager.stopVoiceRecognition();
+        if(audioDeviceManager != null) {
+            audioDeviceManager.stopVoiceRecognition();
         }
 
         if(writePacketThread != null) {
@@ -258,7 +256,7 @@ public class AudioController {
             }
             String ip = cu.publicSocketAddress.getAddress().getHostAddress();
             int port = cu.publicSocketAddress.getPort();
-            Log.d(TAG," ip:"+ip+":"+port+" publicIp:"+publicIp+":"+publicPort);
+            //Log.d(TAG," ip:"+ip+":"+port+" publicIp:"+publicIp+":"+publicPort);
             if((ip.equals(publicIp)) && (publicPort == port)){
                 continue;
             }
@@ -421,4 +419,20 @@ public class AudioController {
             }
         }
     };
+
+    /** オーディオデバイスの設定
+     *
+     * @param mode
+     */
+    public void setAudioDevice(AudioDeviceManager.AUDIO_DEVICE_MODE mode){
+        audioDeviceManager.setAudioDevice(mode);
+    }
+
+    /** 現在のオーディオデバイスモードを取得する
+     *
+     * @return
+     */
+    public AudioDeviceManager.AUDIO_DEVICE_MODE getAudioDeviceMode(){
+        return audioDeviceManager.getAudioDeviceMode();
+    }
 }
