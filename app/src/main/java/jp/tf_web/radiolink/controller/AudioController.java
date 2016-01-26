@@ -399,7 +399,7 @@ public class AudioController {
                 Log.i(TAG, "receive data size:"+data.length);
 
                 //再生を開始
-                writePacketThread.startRunning(AudioManager.STREAM_MUSIC);
+                writePacketThread.startRunning(AudioManager.STREAM_VOICE_CALL);
 
                 //onReceiveを成る可く早く終わらせたいので 別スレッドでエンコード等を実行
 
@@ -442,6 +442,15 @@ public class AudioController {
      * @param mode
      */
     public void setAudioDevice(AudioDeviceManager.AUDIO_DEVICE_MODE mode){
+        //AudioManager.STREAM_VOICE_CALL と AudioManager.STREAM_MUSIC の切り替えが必要
+        if(mode == AudioDeviceManager.AUDIO_DEVICE_MODE.NORMAL) {
+            //通常モード
+            writePacketThread.setAudioStreamType(AudioManager.STREAM_VOICE_CALL);
+        }
+        else{
+            //スピーカー,ヘッドセット
+            writePacketThread.setAudioStreamType(AudioManager.STREAM_MUSIC);
+        }
         audioDeviceManager.setAudioDevice(mode);
     }
 

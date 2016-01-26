@@ -29,6 +29,8 @@ public class TrackManager {
     //再生用データを送るスレッドプール
     private ExecutorService writeExecutor = Executors.newSingleThreadExecutor();
 
+    private int bufSize;
+
     /** コンストラクタ
      *
      * @param context コンテキスト
@@ -37,28 +39,29 @@ public class TrackManager {
     public TrackManager(final Context context,final int sampleRateInHz){
         this.context = context;
         this.sampleRateInHz = sampleRateInHz;
+
+        // 必要となるバッファサイズを計算
+        bufSize = AudioTrack.getMinBufferSize(
+                sampleRateInHz,
+                AudioFormat.CHANNEL_OUT_MONO,
+                AudioFormat.ENCODING_PCM_16BIT);
     }
 
     /** 初期化処理
      *
-     * @param audioStream オーディオストリーム種類
+     * @param streamType オーディオストリーム種類
      */
-    void initialize(final int audioStream) {
+    private void initialize(final int streamType) {
         if(audioTrack != null){
             audioTrack.stop();
             audioTrack = null;
         }
 
-        // 必要となるバッファサイズを計算
-        int bufSize = AudioTrack.getMinBufferSize(
-                sampleRateInHz,
-                AudioFormat.CHANNEL_OUT_MONO,
-                AudioFormat.ENCODING_PCM_16BIT);
         Log.d(TAG, "PLAY bufSize:" + bufSize);
 
         // AudioTrackインスタンス作成
         audioTrack = new AudioTrack(
-                audioStream,
+                streamType,
                 sampleRateInHz,
                 AudioFormat.CHANNEL_OUT_MONO,
                 AudioFormat.ENCODING_PCM_16BIT,
@@ -70,11 +73,11 @@ public class TrackManager {
 
     /** 再生 開始
      *
-     * @param audioStream
+     * @param streamType
      */
-    public void start(final int audioStream){
+    public void start(final int streamType){
         //初期化処理
-        initialize(audioStream);
+        initialize(streamType);
 
         //再生開始
         audioTrack.play();
@@ -86,6 +89,15 @@ public class TrackManager {
     public void stop(){
         if(audioTrack == null) return;
         audioTrack.stop();
+    }
+
+    /** オーディオストリームタイプを変更する
+     *
+     * @param streamType
+     */
+    public void setAudioStreamType(int streamType){
+        //audioTrackを作りなおす
+        start(streamType);
     }
 
     /** オーディオセッションIDを取得

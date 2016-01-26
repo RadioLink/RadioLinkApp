@@ -99,7 +99,7 @@ public class WritePacketThread extends Thread {
         //送信元に対応したオーディオトラックを取得
         String ssrc = packet.getHeader().getSsrc();
         if(trackManagerMap.get(ssrc) == null){
-            Log.d(TAG,"trackManager is null");
+            Log.d(TAG, "trackManager is null");
             return;
         }
 
@@ -132,6 +132,22 @@ public class WritePacketThread extends Thread {
         isRunning = false;
     }
 
+
+    /** 作成済みのオーディオトラック全てのオーディオストリームタイプの設定
+     *
+     * @param streamType
+     */
+    public void setAudioStreamType(final int streamType){
+        this.audioStream = streamType;
+
+        //全てのオーディオトラックのオーディオストリームタイプを変更する
+        if(trackManagerMap != null) {
+            for (Map.Entry<String, TrackManager> t : trackManagerMap.entrySet()) {
+                t.getValue().setAudioStreamType(streamType);
+            }
+        }
+    }
+
     @Override
     public void run(){
         Log.i(TAG, "WritePacketThread start");
@@ -158,11 +174,13 @@ public class WritePacketThread extends Thread {
             }
         }
 
-        //全てのオーディオトラックを停止
-        for(Map.Entry<String,TrackManager> t:trackManagerMap.entrySet()) {
-            t.getValue().stop();
+        if(trackManagerMap != null) {
+            //全てのオーディオトラックを停止
+            for (Map.Entry<String, TrackManager> t : trackManagerMap.entrySet()) {
+                t.getValue().stop();
+            }
+            trackManagerMap.clear();
         }
-        trackManagerMap.clear();
         receivePacketList.clear();
 
         Log.i(TAG, "WritePacketThread stop");
