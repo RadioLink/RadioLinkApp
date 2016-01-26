@@ -186,6 +186,11 @@ public class AudioController {
             recordManager.stop();
             recordManager = null;
         }
+
+        if(udpServiceReceiver != null){
+            udpServiceReceiver.unregisterReceiver();
+            udpServiceReceiver = null;
+        }
     }
 
     /** 利用停止

@@ -115,7 +115,7 @@ public class RecordManager {
                     listener.onAudioRecord(dst, rec_size, volume);
                 }
                 audioRecord.stop();
-                //audioRecord.release();
+                audioRecord.release();
                 audioRecord = null;
             }
         });

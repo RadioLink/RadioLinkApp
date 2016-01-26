@@ -145,8 +145,12 @@ public class HomeActivity extends Activity
 
         //課金 処理の為の初期化
         if(inAppBillingUtil == null) {
-            inAppBillingUtil = new InAppBillingUtil(getApplicationContext(), inAppBillingUtilListener);
-            inAppBillingUtil.setup();
+            try {
+                inAppBillingUtil = new InAppBillingUtil(getApplicationContext(), inAppBillingUtilListener);
+                inAppBillingUtil.setup();
+            }catch (Exception e){
+                e.printStackTrace();
+            }
         }
 
         //GCMの通知を受信するレシーバーを有効にする

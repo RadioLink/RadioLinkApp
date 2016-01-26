@@ -61,6 +61,13 @@ public class UDPServiceReceiver extends BroadcastReceiver {
         context.registerReceiver(this, intentFilter);
     }
 
+    /** レシーバー登録を解除する
+     *
+     */
+    public void unregisterReceiver(){
+        context.unregisterReceiver(this);
+    }
+
     @Override
     public void onReceive(Context context, Intent intent) {
         //インテントで渡されたコマンドの処理を行う
