@@ -34,7 +34,15 @@ public class BluetoothAudioDeviceManager {
 
     private AudioManager audioManager;
 
-    ComponentName controlReceiverName;
+    private ComponentName controlReceiverName;
+
+    //オーディオデバイス タイプ
+    public enum AUDIO_DEVICE_MODE{
+        NONE,
+        NORMAL,
+        SPEAKER,
+        HEADSET
+    }
 
     //インストラクタ
     public BluetoothAudioDeviceManager(Context context){
@@ -62,15 +70,47 @@ public class BluetoothAudioDeviceManager {
         bluetoothAdapter.getProfileProxy(context, bluetoothProfileListener, BluetoothProfile.HEADSET);
     }
 
+    /** オーディオデバイスの設定
+     *
+     * @param mode
+     */
+    public void setAudioDevice(AUDIO_DEVICE_MODE mode){
+        audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
+
+        if(mode == AUDIO_DEVICE_MODE.HEADSET) {
+            //ヘッドセット
+            audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
+            audioManager.setBluetoothScoOn(true);
+            audioManager.startBluetoothSco();
+        }
+        else if(mode == AUDIO_DEVICE_MODE.SPEAKER){
+            //スピーカー
+            audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
+            audioManager.setSpeakerphoneOn(true);
+            audioManager.setBluetoothScoOn(false);
+            audioManager.stopBluetoothSco();
+        }
+        else if(mode == AUDIO_DEVICE_MODE.NORMAL){
+            //通常
+            audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
+            audioManager.setSpeakerphoneOn(false);
+            audioManager.setBluetoothScoOn(false);
+            audioManager.stopBluetoothSco();
+        }
+        else{
+            //スピーカー等の利用停止
+            audioManager.setSpeakerphoneOn(false);
+            audioManager.setBluetoothScoOn(false);
+            audioManager.stopBluetoothSco();
+        }
+    }
+
     //ヘッドセットに接続
     public void startVoiceRecognition(){
         if(bluetoothDevice == null) return;
 
-        //オーディオマネージャーの設定変更
-        audioManager = (AudioManager)context.getSystemService(Context.AUDIO_SERVICE);
-        audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
-        audioManager.setBluetoothScoOn(true);
-        audioManager.startBluetoothSco();
+        //オーディオデバイスの設定
+        setAudioDevice(AUDIO_DEVICE_MODE.NORMAL);
 
         //MEDIA_BUTTONのイベントを受け取る
         controlReceiverName = new ComponentName(context, BluetoothControlReceiver.class);
