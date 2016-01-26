@@ -245,7 +245,7 @@ public class UDPService extends Service {
     /** 初期化処理など
      *
      */
-    private void start(final String bindAddr,final int bindPort){
+    private synchronized void start(final String bindAddr,final int bindPort){
         Log.d(TAG, "start()");
 
         //受信待ち
@@ -257,7 +257,7 @@ public class UDPService extends Service {
     /** 停止処理など
      *
      */
-    private void stop(){
+    private synchronized void stop(){
         Log.d(TAG, "stop()");
 
         //受信 待ち 終了

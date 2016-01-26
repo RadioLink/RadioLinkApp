@@ -481,9 +481,6 @@ public class HomeActivity extends Activity
             audioController = null;
         }
 
-        //UDPサービス STOP
-        UDPService.sendCmd(getApplicationContext(), UDPService.CMD_STOP);
-
     }
 
     //カメラボタン

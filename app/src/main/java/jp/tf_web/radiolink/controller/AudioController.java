@@ -172,6 +172,9 @@ public class AudioController {
     public void stop(){
         activeChannel = null;
 
+        //UDPサービス STOP
+        UDPService.sendCmd(context, UDPService.CMD_STOP);
+
         //Bluetoothヘッドセットから切断
         if(audioDeviceManager != null) {
             audioDeviceManager.stopVoiceRecognition();
@@ -249,7 +252,13 @@ public class AudioController {
             return;
         }
 
+        if(localAddr == null) {
+            Log.d(TAG, "localAddr is null");
+            return;
+        }
+
         //データを送信
+        String localIp = localAddr.getAddress().getHostAddress();
         String publicIp = publicAddr.getAddress().getHostAddress();
         int publicPort = publicAddr.getPort();
         for(ChannelUser cu:activeChannel.getChannelUserList()){
@@ -259,10 +268,13 @@ public class AudioController {
                 Log.d(TAG,"cu.publicSocketAddress is null");
                 continue;
             }
-            String ip = cu.publicSocketAddress.getAddress().getHostAddress();
-            int port = cu.publicSocketAddress.getPort();
+            //ローカルIP,パブリックIP,パブリックポートで比較
+            String cLocalIp = cu.localSocketAddress.getAddress().getHostAddress();
+            String cPublicIp = cu.publicSocketAddress.getAddress().getHostAddress();
+            int cPort = cu.publicSocketAddress.getPort();
             //Log.d(TAG," ip:"+ip+":"+port+" publicIp:"+publicIp+":"+publicPort);
-            if((ip.equals(publicIp)) && (publicPort == port)){
+            if((cLocalIp.equals(localIp)) && (cPublicIp.equals(publicIp)) && (publicPort == cPort)){
+                Log.d(TAG,"continue");
                 continue;
             }
 
