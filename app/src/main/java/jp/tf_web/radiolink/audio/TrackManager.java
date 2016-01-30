@@ -116,20 +116,25 @@ public class TrackManager {
      * @param size バッファサイズ
      */
     public void write(final byte[] pcm,final int offset,final int size){
+        if(audioTrack == null){
+            return;
+        }
         //再生バッファに送る
         if(Build.VERSION.SDK_INT < Build.VERSION_CODES.M){
             //23未満 オーディオ書き込みでブロッキングされるので executor で実行
             writeExecutor.execute(new Runnable() {
                 @Override
                 public void run() {
+                    if(audioTrack == null){
+                        return;
+                    }
                     //スレッド優先度を変更
                     Process.setThreadPriority(Process.THREAD_PRIORITY_AUDIO);
 
                     audioTrack.write(pcm, offset, size);
                 }
             });
-        }
-        else{
+        } else {
             //23 以上 非同期で書き込みできるのでこちらを使う
             audioTrack.write(pcm, offset, size, AudioTrack.WRITE_NON_BLOCKING);
         }

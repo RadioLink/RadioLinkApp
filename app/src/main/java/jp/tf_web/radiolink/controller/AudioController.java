@@ -400,7 +400,8 @@ public class AudioController {
                 Log.i(TAG, "receive data size:"+data.length);
 
                 //再生を開始
-                writePacketThread.startRunning(AudioManager.STREAM_VOICE_CALL);
+                //writePacketThread.startRunning(AudioManager.STREAM_VOICE_CALL);
+                writePacketThread.startRunning(AudioManager.STREAM_MUSIC);
 
                 //onReceiveを成る可く早く終わらせたいので 別スレッドでエンコード等を実行
 
