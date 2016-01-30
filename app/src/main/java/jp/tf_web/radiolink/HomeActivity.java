@@ -270,14 +270,14 @@ public class HomeActivity extends Activity
     @Override
     public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
         //許可ダイアログに対してユーザーが選択した結果の受け取り
-        PermissionUtil.getInstance().onRequestPermissionsResult(requestCode,permissions,grantResults);
+        PermissionUtil.getInstance().onRequestPermissionsResult(requestCode, permissions, grantResults);
     }
 
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        Log.d(TAG, "onDestroy()");
-        //各種 停止
+    /** 終了処理
+     *
+     */
+    private void destroy() {
+        //停止
         stop();
 
         //課金処理の破棄
@@ -294,6 +294,32 @@ public class HomeActivity extends Activity
         if(netWorkController != null){
             netWorkController.destroy();
         }
+    }
+
+    @Override
+    protected void onDestroy() {
+        Log.d(TAG, "onDestroy()");
+        //アクティブなチャンネルが設定済みの場合は Exitしてから 終了処理をする
+        if(activeChannel != null){
+            exitChannel(activeChannel, new ExitChannelUserlistener() {
+                @Override
+                public void success() {
+                    //終了処置
+                    destroy();
+                }
+
+                @Override
+                public void error(NCMBException e) {
+                    destroy();
+                }
+            });
+        }
+        else{
+            //終了処置
+            destroy();
+        }
+
+        super.onDestroy();
     }
 
     /** メニューを画面に追加
