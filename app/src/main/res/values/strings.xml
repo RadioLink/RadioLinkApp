@@ -24,6 +24,9 @@
     <string name="mic_normal">Mic</string>
     <string name="mic_mute">Mute</string>
 
+    <string name="mic_mute_normal">マイクを有効にしました。</string>
+    <string name="mic_mute_message">マイクをミュートにしました。</string>
+
     <string name="purchase_cancel">購入をキャンセルしました。</string>
 
     <!-- GCM title,message -->

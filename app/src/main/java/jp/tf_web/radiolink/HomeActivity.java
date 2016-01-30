@@ -134,6 +134,9 @@ public class HomeActivity extends Activity
     //購入済みアイテム
     private Purchase purchase = null;
 
+    //メニュー
+    private MenuItem actionItem;
+
     //GCM 通知 受信
     private GcmListenerServiceReceiver gcmListenerServiceReceiver;
 
@@ -303,7 +306,7 @@ public class HomeActivity extends Activity
         getMenuInflater().inflate(R.menu.menu_main, menu);
 
         // ShareActionProvider の設定
-        MenuItem actionItem = menu.findItem(R.id.actionShareAlways);
+        actionItem = menu.findItem(R.id.actionShareAlways);
         ShareActionProvider actionProvider = (ShareActionProvider) actionItem.getActionProvider();
 
         ShareActionUtil.getInstance().setActionProvider(actionProvider);
@@ -684,6 +687,16 @@ public class HomeActivity extends Activity
         });
     }
 
+    /** UIの有効,無効切り替え
+     *
+     * @param enabled
+     */
+    private void setUiEnabled(boolean enabled){
+        btnCamera.setEnabled(enabled);
+        lblChannelCode.setEnabled(enabled);
+        actionItem.setEnabled(enabled);
+    }
+
     /** 照度センサーのステータス受信
      *
      */
@@ -692,15 +705,14 @@ public class HomeActivity extends Activity
         @Override
         public void onLightSensorChanged(SensorEvent event, float value) {
             //Log.d(TAG, "onLightSensorChanged value:" + value);
+
+            //照度センサーの閾値 判定
             if(value < Config.LIGHT_SENSOR_THRESHOLD){
-                //照度センサーの閾値 判定
                 //画面の操作を停止する
-                btnCamera.setEnabled(false);
-                lblChannelCode.setEnabled(false);
+                setUiEnabled(false);
             }
             else{
-                btnCamera.setEnabled(true);
-                lblChannelCode.setEnabled(true);
+                setUiEnabled(true);
             }
         }
     };
@@ -860,7 +872,7 @@ public class HomeActivity extends Activity
          */
         @Override
         public void onMicrophoneMute(boolean isMute){
-            String msg = "isMute:"+((isMute)?"true":"false");
+            String msg = ((isMute)?getString(R.string.mic_mute_message):getString(R.string.mic_mute_normal));
             Log.d(TAG,msg);
             Toast.makeText(getApplicationContext(),msg,Toast.LENGTH_SHORT).show();
 
