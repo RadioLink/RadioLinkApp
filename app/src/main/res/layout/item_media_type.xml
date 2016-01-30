@@ -1,24 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
-    android:orientation="vertical"
+    android:layout_gravity="left"
     android:layout_width="57dp"
     android:layout_height="52dp"
-    android:layout_gravity="left">
+    android:orientation="vertical">
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/media_type_normal"
         android:id="@+id/lblMediaType"
-        android:textColor="@color/label_color"/>
+        android:textColor="@color/label_color"
+        android:layout_gravity="center_horizontal" />
 
     <Button
         android:layout_width="32dp"
         android:layout_height="32dp"
         android:id="@+id/btnMedia"
         android:background="@drawable/telephone46"
-        android:layout_gravity="center_horizontal"
-        style="?android:attr/borderlessButtonStyle" />
+        style="?android:attr/borderlessButtonStyle"
+        android:layout_gravity="center_horizontal"/>
 
 </LinearLayout>

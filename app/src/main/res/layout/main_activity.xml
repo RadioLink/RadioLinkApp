@@ -35,6 +35,8 @@
 
         <include layout="@layout/item_media_type" />
 
+        <include layout="@layout/item_mic" />
+
     </FrameLayout>
 
     <ImageView

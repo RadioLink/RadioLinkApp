@@ -21,6 +21,11 @@
     <string name="media_type_speaker">Speaker</string>
     <string name="media_type_normal">Normal</string>
 
+    <string name="mic_normal">Mic</string>
+    <string name="mic_mute">Mute</string>
+
+    <string name="purchase_cancel">購入をキャンセルしました。</string>
+
     <!-- GCM title,message -->
     <string name="gcm_title_channel_update">チャンネル アップデート</string>
     <string name="gcm_message_channel_update">チャンネル が更新されました。</string>

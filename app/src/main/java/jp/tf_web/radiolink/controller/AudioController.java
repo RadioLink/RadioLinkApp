@@ -19,6 +19,7 @@ import jp.tf_web.radiolink.audio.OpusManager;
 import jp.tf_web.radiolink.audio.RecordManager;
 import jp.tf_web.radiolink.audio.RecordManagerListener;
 import jp.tf_web.radiolink.audio.AudioDeviceManager;
+import jp.tf_web.radiolink.bluetooth.MediaButtonReceiverListener;
 import jp.tf_web.radiolink.ncmb.db.Channel;
 import jp.tf_web.radiolink.ncmb.db.ChannelUser;
 import jp.tf_web.radiolink.net.NetWorkUtil;
@@ -104,7 +105,7 @@ public class AudioController {
 
         //Bluetoothヘッドセットを利用する
         if(audioDeviceManager == null) {
-            audioDeviceManager = new AudioDeviceManager(this.context);
+            audioDeviceManager = new AudioDeviceManager(context,mediaButtonReceiverListener);
         }
 
         //OPUSデコード,エンコード
@@ -118,12 +119,12 @@ public class AudioController {
         //再生処理の初期化
         if(writePacketThread == null) {
             //再生処理をするスレッドを初期化
-            writePacketThread = new WritePacketThread(this.context, opusManager);
+            writePacketThread = new WritePacketThread(context, opusManager);
         }
 
         //録音関連処理の初期化
         if(recordManager == null) {
-            recordManager = RecordManager.getInstance(this.context, this.sampleRateInHz, this.bufSize, recordManagerListener);
+            recordManager = RecordManager.getInstance(context, this.sampleRateInHz, bufSize, recordManagerListener);
         }
 
         //UDPServiceからの受信を受け取るレシーバー
@@ -460,5 +461,38 @@ public class AudioController {
      */
     public AudioDeviceManager.AUDIO_DEVICE_MODE getAudioDeviceMode(){
         return audioDeviceManager.getAudioDeviceMode();
+    }
+
+    /** MediaButtonクリックイベントを受け取るリスナー
+     *
+     */
+    private MediaButtonReceiverListener mediaButtonReceiverListener = new MediaButtonReceiverListener(){
+        /** MEDIA_BUTTON ボタンが押された事を通知
+         *
+         */
+        @Override
+        public void onClickMediaButton(){
+            Log.d(TAG, "BUTTON PRESSED!");
+            //マイク ミュート設定を切り替える
+            setMicrophoneMute(!isMicrophoneMute() );
+        }
+    };
+
+    /** マイク,スピーカー ミュート設定
+     *
+     * @param mute
+     */
+    public void setMicrophoneMute(boolean mute){
+        audioDeviceManager.setMicrophoneMute(mute);
+        //ミュート設定が切り替わったのでリスナーに通知
+        listener.onMicrophoneMute(mute);
+    }
+
+    /** マイクのミュート設定を取得
+     *
+     * @return
+     */
+    public boolean isMicrophoneMute(){
+        return audioDeviceManager.isMicrophoneMute();
     }
 }

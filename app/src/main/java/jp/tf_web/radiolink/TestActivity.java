@@ -305,7 +305,7 @@ public class TestActivity extends Activity
 
         //Bluetoothヘッドセットを利用する
         if(bluetoothAudioDeviceManager == null) {
-            bluetoothAudioDeviceManager = new AudioDeviceManager(getApplicationContext());
+            bluetoothAudioDeviceManager = new AudioDeviceManager(getApplicationContext(),mediaButtonReceiverListener);
         }
 
         //照度センサーを初期化
@@ -324,8 +324,8 @@ public class TestActivity extends Activity
         bluetoothAudioDeviceManager.startVoiceRecognition();
 
         //MEDIA_BUTTON イベントを受信する
-        mediaButtonReceiver = new MediaButtonReceiver(getApplicationContext(), mediaButtonReceiverListener);
-        mediaButtonReceiver.registerReceiver();
+        //mediaButtonReceiver = new MediaButtonReceiver(getApplicationContext(), mediaButtonReceiverListener);
+        //mediaButtonReceiver.registerReceiver();
 
         //再生 開始
         audioController.start(AudioManager.STREAM_MUSIC);
@@ -342,9 +342,9 @@ public class TestActivity extends Activity
         }
 
         //MEDIA_BUTTON イベントを受信する事を止める
-        if(mediaButtonReceiver != null) {
-            mediaButtonReceiver.unregisterReceiver();
-        }
+        //if(mediaButtonReceiver != null) {
+        //    mediaButtonReceiver.unregisterReceiver();
+        //}
 
         //Bluetoothヘッドセットから切断
         if(bluetoothAudioDeviceManager != null) {
@@ -876,6 +876,11 @@ public class TestActivity extends Activity
          */
         @Override
         public void onReceive(Packet packet) {
+
+        }
+
+        @Override
+        public void onMicrophoneMute(boolean isMute) {
 
         }
     };

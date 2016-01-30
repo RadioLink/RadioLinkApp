@@ -28,4 +28,10 @@ public interface AudioControllerListener {
      * @param packet 受信したパケット
      */
     void onReceive(final Packet packet);
+
+    /** ミュート状態に変更があった事の通知
+     *
+     * @param isMute
+     */
+    void onMicrophoneMute(boolean isMute);
 }

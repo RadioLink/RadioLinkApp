@@ -12,6 +12,7 @@ import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.hardware.SensorEvent;
 import android.media.AudioManager;
+import android.media.Image;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Handler;
@@ -29,6 +30,8 @@ import android.widget.Toast;
 
 import com.google.zxing.integration.android.IntentResult;
 import com.nifty.cloud.mb.core.NCMBException;
+
+import org.w3c.dom.Text;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -92,9 +95,6 @@ public class HomeActivity extends Activity
     //ネットワーク関係の処理をするクラス
     private NetWorkController netWorkController;
 
-    //MEDIA_BUTTONのクリック受け取り
-    private MediaButtonReceiver mediaButtonReceiver;
-
     //照度センサー
     private LightSensorManager lightSensorManager;
 
@@ -122,6 +122,15 @@ public class HomeActivity extends Activity
     //メディアボタン
     private Button btnMedia;
 
+    //マイク ミュートのラベル
+    private TextView lblMicMute;
+
+    //マイク ミュートボタン
+    private Button btnMicMute;
+
+    //マイク ミュート時のオーバーレイ画像
+    private ImageView imgMicMute;
+
     //購入済みアイテム
     private Purchase purchase = null;
 
@@ -135,7 +144,6 @@ public class HomeActivity extends Activity
         setContentView(R.layout.main_activity);
 
         Log.d(TAG, "onCreate() "+this);
-
         Log.d(TAG, " DEVICE:" + Build.DEVICE + " MODEL:" + Build.MODEL);
 
         handler = new Handler();
@@ -174,6 +182,12 @@ public class HomeActivity extends Activity
         //メディア切り替えボタン
         btnMedia = (Button)findViewById(R.id.btnMedia);
         btnMedia.setOnClickListener(btnMediaOnClickListener);
+
+        //マイクのミュート
+        lblMicMute = (TextView) findViewById(R.id.lblMicMute);
+        imgMicMute = (ImageView) findViewById(R.id.imgMicMute);
+        btnMicMute = (Button) findViewById(R.id.btnMicMute);
+        btnMicMute.setOnClickListener(btnMicMuteOnClickListener);
 
         //M以上の場合パーミッションの確認をする
         checkPermissions();
@@ -440,10 +454,6 @@ public class HomeActivity extends Activity
         //各クラスの初期化
         initialize();
 
-        //MEDIA_BUTTON イベントを受信する
-        mediaButtonReceiver = new MediaButtonReceiver(getApplicationContext(), mediaButtonReceiverListener);
-        mediaButtonReceiver.registerReceiver();
-
         //再生 開始
         audioController.start(AudioManager.STREAM_MUSIC);
 
@@ -463,12 +473,6 @@ public class HomeActivity extends Activity
             netWorkController = null;
         }
 
-        //MEDIA_BUTTON イベントを受信する事を止める
-        if(mediaButtonReceiver != null) {
-            mediaButtonReceiver.unregisterReceiver();
-            mediaButtonReceiver = null;
-        }
-
         //照度センサーを利用 停止
         if(lightSensorManager != null) {
             lightSensorManager.stop();
@@ -481,6 +485,18 @@ public class HomeActivity extends Activity
             audioController = null;
         }
 
+    }
+
+    /** チャンネル未設定の場合
+     *
+     */
+    private void isChannelCodeIsNull(){
+        //チャンネル未設定の場合
+        String msg = getString(R.string.channel_code_is_null);
+        Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_SHORT).show();
+
+        //ここでChannelCode設定ダイアログを表示してみる
+        showChannelCodeDialog();
     }
 
     //カメラボタン
@@ -506,12 +522,17 @@ public class HomeActivity extends Activity
             }
             else{
                 //チャンネル未設定の場合
-                String msg = getString(R.string.channel_code_is_null);
-                Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_SHORT).show();
+                isChannelCodeIsNull();
             }
 
         }
     };
+
+    //チャンネルコード入力ダイアログを表示する
+    private void showChannelCodeDialog(){
+        ChannelCodeDialogFragment dialogFragment = new ChannelCodeDialogFragment().setListener(channelCodeDialogFragmentListener);
+        dialogFragment.show(getFragmentManager(), ChannelCodeDialogFragment.class.getSimpleName());
+    }
 
     //チャンネルコードをタップ時
     private View.OnClickListener lblChannelCodeOnClickListener = new View.OnClickListener() {
@@ -519,8 +540,7 @@ public class HomeActivity extends Activity
         @Override
         public void onClick(View v) {
             //チャンネルコード入力ダイアログを表示する
-            ChannelCodeDialogFragment dialogFragment = new ChannelCodeDialogFragment().setListener(channelCodeDialogFragmentListener);
-            dialogFragment.show(getFragmentManager(), ChannelCodeDialogFragment.class.getSimpleName());
+            showChannelCodeDialog();
         }
     };
 
@@ -664,21 +684,6 @@ public class HomeActivity extends Activity
         });
     }
 
-    /** MediaButtonクリックイベントを受け取るリスナー
-     *
-     */
-    private MediaButtonReceiverListener mediaButtonReceiverListener = new MediaButtonReceiverListener(){
-        /** MEDIA_BUTTON ボタンが押された事を通知
-         *
-         */
-        @Override
-        public void onClickMediaButton(){
-            Log.d(TAG, "BUTTON PRESSED!");
-            Toast.makeText(getApplicationContext(), "BUTTON PRESSED!", Toast.LENGTH_SHORT).show();
-        }
-    };
-
-
     /** 照度センサーのステータス受信
      *
      */
@@ -735,7 +740,7 @@ public class HomeActivity extends Activity
             purchase = inv.getPurchase(Config.PRODUCT_ITEM_1_ID);
             if (purchase != null) {
                 Log.d(TAG, "IAB 商品を購入済み");
-                //TODO: 購入済みなので 制限された機能の開放等を行う
+                //購入済みなので 制限された機能の開放等を行う
                 return;
             }
             Log.d(TAG, "IAB 商品を購入が可能");
@@ -749,7 +754,9 @@ public class HomeActivity extends Activity
         @Override
         public void onIabPurchaseFinished(IabResult result, Purchase purchase) {
             if (result.isFailure()) {
-                Log.d(TAG,"IAB 購入 失敗");
+                Log.d(TAG, "IAB 購入 キャンセル");
+                String msg = (String) getString(R.string.purchase_cancel);
+                Toast.makeText(getApplicationContext(),msg,Toast.LENGTH_SHORT).show();
 
                 //NORMAL 受話器アイコン
                 setAudioDevice(AudioDeviceManager.AUDIO_DEVICE_MODE.NORMAL);
@@ -846,6 +853,20 @@ public class HomeActivity extends Activity
         public void onReceive(Packet packet) {
 
         }
+
+        /** ミュート状態に変更があった事の通知
+         *
+         * @param isMute
+         */
+        @Override
+        public void onMicrophoneMute(boolean isMute){
+            String msg = "isMute:"+((isMute)?"true":"false");
+            Log.d(TAG,msg);
+            Toast.makeText(getApplicationContext(),msg,Toast.LENGTH_SHORT).show();
+
+            //画面にミュート状態を反映させる
+            setMicMute(isMute);
+        }
     };
 
     //カメラ,画像 取得時のリスナー
@@ -939,8 +960,7 @@ public class HomeActivity extends Activity
 
             if(audioController == null){
                 //チャンネル未設定の場合
-                String msg = getString(R.string.channel_code_is_null);
-                Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_SHORT).show();
+                isChannelCodeIsNull();
                 return;
             }
 
@@ -1113,5 +1133,44 @@ public class HomeActivity extends Activity
             };
             PermissionUtil.getInstance().checkPermissions(this,permissions);
         }
+    }
+
+    //ミュートボタン クリックリスナー
+    private View.OnClickListener btnMicMuteOnClickListener = new View.OnClickListener(){
+
+        @Override
+        public void onClick(View v) {
+            if(audioController == null){
+                //Channel未設定の場合
+                isChannelCodeIsNull();
+                return;
+            }
+            //マイク ミュート設定をトグル
+            audioController.setMicrophoneMute(!audioController.isMicrophoneMute());
+        }
+    };
+
+    /** マイクアイコンををミュートにする
+     *
+     * @param mute
+     */
+    private void setMicMute(final boolean mute){
+        handler.post(new Runnable() {
+            @Override
+            public void run() {
+                if(mute == true){
+                    //ミュート
+                    String txt = (String) getString(R.string.mic_mute);
+                    lblMicMute.setText(txt);
+                    imgMicMute.setVisibility(View.VISIBLE);
+                }
+                else{
+                    //通常
+                    String txt = (String) getString(R.string.mic_normal);
+                    lblMicMute.setText(txt);
+                    imgMicMute.setVisibility(View.INVISIBLE);
+                }
+            }
+        });
     }
 }

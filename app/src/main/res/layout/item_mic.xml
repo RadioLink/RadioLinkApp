@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_gravity="right"
+    android:layout_width="57dp"
+    android:layout_height="52dp"
+    android:orientation="vertical">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/mic_normal"
+        android:id="@+id/lblMicMute"
+        android:textColor="@color/label_color"
+        android:layout_gravity="center_horizontal" />
+
+    <FrameLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal">
+
+        <Button
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:id="@+id/btnMicMute"
+            android:background="@drawable/voice29"
+            style="?android:attr/borderlessButtonStyle" />
+
+        <ImageView
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:id="@+id/imgMicMute"
+            android:src="@drawable/prohibition13"
+            android:visibility="invisible" />
+
+    </FrameLayout>
+
+</LinearLayout>

@@ -8,10 +8,13 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.media.AudioManager;
 import android.util.Log;
+import android.widget.Toast;
 
 import java.util.List;
 
 import jp.tf_web.radiolink.bluetooth.BluetoothControlReceiver;
+import jp.tf_web.radiolink.bluetooth.MediaButtonReceiver;
+import jp.tf_web.radiolink.bluetooth.MediaButtonReceiverListener;
 
 /** Bluetoothヘッドセットを有効にするための設定
  *
@@ -31,12 +34,20 @@ public class AudioDeviceManager {
     //Bluetoothデバイス
     private BluetoothDevice bluetoothDevice;
 
-    //Bluetoothヘッドセットが接続ステータス
-    private boolean _isBluetoothConnected;
+    //MEDIA_BUTTONのクリック受け取り
+    private MediaButtonReceiver mediaButtonReceiver;
+    private MediaButtonReceiverListener mediaButtonReceiverListener;
 
+    //Bluetoothヘッドセットが接続ステータス
+    private boolean isBluetoothConnected;
+
+    //オーディオマネージャー
     private AudioManager audioManager;
 
     private ComponentName controlReceiverName;
+
+    //マイクミュート ステータス
+    private boolean isMicMute = false;
 
     //オーディオデバイス タイプ
     public enum AUDIO_DEVICE_MODE{
@@ -48,9 +59,15 @@ public class AudioDeviceManager {
     //現在のオーディオデバイスモード
     private AUDIO_DEVICE_MODE audioDeviceMode = AUDIO_DEVICE_MODE.NORMAL;
 
-    //インストラクタ
-    public AudioDeviceManager(Context context){
+    /** コンストラクタ
+     *
+     * @param context
+     * @param mediaButtonReceiverListener
+     */
+    public AudioDeviceManager(Context context,MediaButtonReceiverListener mediaButtonReceiverListener){
         this.context = context;
+        this.audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
+        this.mediaButtonReceiverListener = mediaButtonReceiverListener;
 
         //各種初期化
         initialize();
@@ -58,7 +75,7 @@ public class AudioDeviceManager {
 
     //Bluetoothオーディオデバイスとの接続ステータス
     public boolean isBluetoothConnected(){
-        return _isBluetoothConnected;
+        return isBluetoothConnected;
     }
 
     /** 各種初期化
@@ -72,6 +89,12 @@ public class AudioDeviceManager {
             return;
         }
         bluetoothAdapter.getProfileProxy(context, bluetoothProfileListener, BluetoothProfile.HEADSET);
+
+        //MEDIA_BUTTON イベントを受信するレシーバー
+        if(mediaButtonReceiverListener != null) {
+            mediaButtonReceiver = new MediaButtonReceiver(context, mediaButtonReceiverListener);
+            mediaButtonReceiver.registerReceiver();
+        }
     }
 
     /** オーディオデバイスの設定
@@ -79,8 +102,6 @@ public class AudioDeviceManager {
      * @param mode
      */
     public void setAudioDevice(AUDIO_DEVICE_MODE mode){
-        audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
-
         if(mode == AUDIO_DEVICE_MODE.HEADSET) {
             //ヘッドセット
             audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
@@ -137,8 +158,42 @@ public class AudioDeviceManager {
 
         setAudioDevice(AUDIO_DEVICE_MODE.NORMAL);
 
-        //bluetoothAdapter.closeProfileProxy(BluetoothProfile.HEADSET, bluetoothHeadset);
-        //bluetoothAdapter = null;
+        //MEDIA_BUTTON イベントを受信する事を止める
+        if(mediaButtonReceiver != null) {
+            mediaButtonReceiver.unregisterReceiver();
+            mediaButtonReceiver = null;
+        }
+    }
+
+    /** スピーカーをミュート
+     *
+     * @param mute
+     */
+    public void setSpeakerMute(boolean mute){
+        if(mute == true) {
+            audioManager.setRingerMode(AudioManager.RINGER_MODE_SILENT);
+        }
+        else{
+            audioManager.setRingerMode(AudioManager.RINGER_MODE_NORMAL);
+        }
+    }
+
+    /** マイク ミュート設定
+     *
+     * @param mute
+     */
+    public void setMicrophoneMute(boolean mute){
+        //マイク ミュート
+        audioManager.setMicrophoneMute(mute);
+        isMicMute = mute;
+    }
+
+    /** マイクのミュート設定を取得
+     *
+     * @return
+     */
+    public boolean isMicrophoneMute(){
+        return isMicMute;
     }
 
     //Bluetoothプロファイル サービスリスナー
@@ -149,7 +204,7 @@ public class AudioDeviceManager {
                 bluetoothHeadset = (BluetoothHeadset) proxy;
                 List<BluetoothDevice> devices = bluetoothHeadset.getConnectedDevices();
                 if(devices.size() > 0){
-                    _isBluetoothConnected = true;
+                    isBluetoothConnected = true;
                     bluetoothDevice = devices.get(0);
 
                     for(BluetoothDevice device:devices){
@@ -162,8 +217,9 @@ public class AudioDeviceManager {
             if (profile == BluetoothProfile.HEADSET) {
                 Log.d(TAG,"onServiceDisconnected");
                 bluetoothHeadset = null;
-                _isBluetoothConnected = false;
+                isBluetoothConnected = false;
             }
         }
     };
+
 }
